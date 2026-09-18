@@ -14,6 +14,12 @@ function art(
     id,
     nombre,
     categoria: 'General',
+    categoriaId: null,
+    tipo: null,
+    tipoId: null,
+    marca: null,
+    modelo: null,
+    compatibilidad: null,
     esRetornable: false,
     stockActual,
     stockMinimo,
@@ -81,6 +87,25 @@ describe('AlertasService', () => {
       esRetornable: true,
       prestados: 1,
       disponibles: 0,
+    });
+  });
+
+  it('copia categoría, tipo, marca, modelo y compatibilidad de cada artículo', async () => {
+    const r = await servicioCon([
+      art(1, 'Tóner HP 26A', 1, 3, {
+        categoria: 'Impresoras',
+        tipo: 'Tóner',
+        marca: 'HP',
+        modelo: '26A',
+        compatibilidad: 'LaserJet Pro M402',
+      }),
+    ]).obtenerAlertasDeStock();
+    expect(r.items[0]).toMatchObject({
+      categoria: 'Impresoras',
+      tipo: 'Tóner',
+      marca: 'HP',
+      modelo: '26A',
+      compatibilidad: 'LaserJet Pro M402',
     });
   });
 

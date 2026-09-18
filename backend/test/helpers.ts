@@ -9,6 +9,7 @@ import {
   TipoMovimiento,
 } from '../src/movimientos/movimiento.entity.js';
 import { EstadoPrestamo, Prestamo } from '../src/prestamos/prestamo.entity.js';
+import { cargarCatalogoInicial } from '../src/seed/catalogo.js';
 
 export async function crearApp(): Promise<INestApplication> {
   if (process.env.NODE_ENV !== 'test') {
@@ -28,12 +29,41 @@ export async function crearApp(): Promise<INestApplication> {
   return app;
 }
 
+/** Vacía todo y deja cargado el catálogo inicial, como en una instalación nueva. */
 export async function limpiarBase(app: INestApplication): Promise<void> {
-  await app
+  const ds = app.get(DataSource);
+  await ds.query(
+    'TRUNCATE TABLE prestamos, movimientos, articulos, tipos_articulo, categorias RESTART IDENTITY CASCADE',
+  );
+  await cargarCatalogoInicial(ds);
+}
+
+export async function idCategoria(
+  app: INestApplication,
+  nombre: string,
+): Promise<number> {
+  const filas: { id: number }[] = await app
     .get(DataSource)
-    .query(
-      'TRUNCATE TABLE prestamos, movimientos, articulos RESTART IDENTITY CASCADE',
-    );
+    .query('SELECT id FROM categorias WHERE nombre = $1', [nombre]);
+  if (filas.length === 0) throw new Error(`No existe la categoría "${nombre}"`);
+  return filas[0].id;
+}
+
+export async function idTipo(
+  app: INestApplication,
+  categoria: string,
+  nombre: string,
+): Promise<number> {
+  const filas: { id: number }[] = await app.get(DataSource).query(
+    `SELECT t.id FROM tipos_articulo t
+       JOIN categorias c ON c.id = t.categoria_id
+      WHERE c.nombre = $1 AND t.nombre = $2`,
+    [categoria, nombre],
+  );
+  if (filas.length === 0) {
+    throw new Error(`No existe el tipo "${nombre}" en "${categoria}"`);
+  }
+  return filas[0].id;
 }
 
 export async function crearArticulo(
@@ -43,7 +73,6 @@ export async function crearArticulo(
   const repo = app.get(DataSource).getRepository(Articulo);
   return repo.save(
     repo.create({
-      categoria: 'General',
       esRetornable: false,
       stockActual: 0,
       stockMinimo: 0,

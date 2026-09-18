@@ -4,7 +4,15 @@ import { clasificarNivel, NivelAlerta } from './clasificar-nivel.js';
 export interface ArticuloConDisponibilidad {
   id: number;
   nombre: string;
+  /** Nombre de la categoría del catálogo (null si no tiene). */
   categoria: string | null;
+  categoriaId: number | null;
+  /** Nombre del tipo del catálogo (null si no tiene). */
+  tipo: string | null;
+  tipoId: number | null;
+  marca: string | null;
+  modelo: string | null;
+  compatibilidad: string | null;
   esRetornable: boolean | null;
   stockActual: number | null;
   stockMinimo: number | null;
@@ -16,6 +24,7 @@ export interface ArticuloConDisponibilidad {
   updatedAt: Date;
 }
 
+/** Requiere el artículo cargado con las relaciones `categoria` y `tipo`. */
 export function conDisponibilidad(
   articulo: Articulo,
   prestados: number,
@@ -23,7 +32,13 @@ export function conDisponibilidad(
   return {
     id: articulo.id,
     nombre: articulo.nombre,
-    categoria: articulo.categoria,
+    categoria: articulo.categoria?.nombre ?? null,
+    categoriaId: articulo.categoriaId,
+    tipo: articulo.tipo?.nombre ?? null,
+    tipoId: articulo.tipoId,
+    marca: articulo.marca,
+    modelo: articulo.modelo,
+    compatibilidad: articulo.compatibilidad,
     esRetornable: articulo.esRetornable,
     stockActual: articulo.stockActual,
     stockMinimo: articulo.stockMinimo,

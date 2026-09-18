@@ -4,6 +4,10 @@ export interface AlertaStockItem {
   id: number;
   nombre: string;
   categoria: string | null;
+  tipo: string | null;
+  marca: string | null;
+  modelo: string | null;
+  compatibilidad: string | null;
   esRetornable: boolean | null;
   stockActual: number;
   stockMinimo: number;

@@ -23,7 +23,13 @@ describe('Esquema de base de datos', () => {
       "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'",
     );
     expect(filas.map((f) => f.table_name)).toEqual(
-      expect.arrayContaining(['articulos', 'prestamos', 'movimientos']),
+      expect.arrayContaining([
+        'articulos',
+        'prestamos',
+        'movimientos',
+        'categorias',
+        'tipos_articulo',
+      ]),
     );
   });
 
@@ -50,7 +56,11 @@ describe('Esquema de base de datos', () => {
       filas.find((f) => f.column_name === col)?.is_nullable;
     expect(anulable('nombre')).toBe('NO');
     for (const col of [
-      'categoria',
+      'categoria_id',
+      'tipo_id',
+      'marca',
+      'modelo',
+      'compatibilidad',
       'es_retornable',
       'stock_actual',
       'stock_minimo',
@@ -59,12 +69,23 @@ describe('Esquema de base de datos', () => {
     }
   });
 
+  it('la categoría ya no es un texto libre: se guarda como referencia al catálogo', async () => {
+    const filas: { column_name: string }[] = await ds.query(
+      "SELECT column_name FROM information_schema.columns WHERE table_name = 'articulos'",
+    );
+    expect(filas.map((f) => f.column_name)).not.toContain('categoria');
+  });
+
   it('un artículo con solo el nombre se guarda con todo lo demás en null', async () => {
     const repo = ds.getRepository(Articulo);
     const guardado = await repo.save(repo.create({ nombre: 'Solo nombre' }));
     const leido = await repo.findOneByOrFail({ id: guardado.id });
     expect(leido).toMatchObject({
-      categoria: null,
+      categoriaId: null,
+      tipoId: null,
+      marca: null,
+      modelo: null,
+      compatibilidad: null,
       esRetornable: null,
       stockActual: null,
       stockMinimo: null,
@@ -76,7 +97,6 @@ describe('Esquema de base de datos', () => {
     await expect(
       repo.insert({
         nombre: 'Malo',
-        categoria: 'X',
         esRetornable: false,
         stockActual: -1,
         stockMinimo: 0,
@@ -86,7 +106,7 @@ describe('Esquema de base de datos', () => {
 
   it('impide repetir el nombre de un artículo (UNIQUE)', async () => {
     const repo = ds.getRepository(Articulo);
-    const datos = { nombre: 'Cable', categoria: 'X', esRetornable: false };
+    const datos = { nombre: 'Cable', esRetornable: false };
     await repo.insert(datos);
     await expect(repo.insert(datos)).rejects.toThrow();
   });

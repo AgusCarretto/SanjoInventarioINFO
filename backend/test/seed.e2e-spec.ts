@@ -42,6 +42,31 @@ describe('Seed de datos de ejemplo (e2e)', () => {
     ]);
   });
 
+  it('deja cada artículo con su categoría y tipo del catálogo', async () => {
+    await cargarDatosEjemplo(app.get(DataSource));
+    const { body } = await request(app.getHttpServer())
+      .get('/api/articulos')
+      .expect(200);
+    const por = (nombre: string) =>
+      body.find((a: { nombre: string }) => a.nombre === nombre);
+    expect(por('Cable de red Cat6')).toMatchObject({
+      categoria: 'Redes',
+      tipo: 'Cable de red',
+    });
+    expect(por('Proyector Epson EB-X06')).toMatchObject({
+      categoria: 'Otros',
+      tipo: 'Proyector',
+      marca: 'Epson',
+      modelo: 'EB-X06',
+    });
+    expect(
+      body.every(
+        (a: { categoria: string | null; tipo: string | null }) =>
+          a.categoria !== null && a.tipo !== null,
+      ),
+    ).toBe(true);
+  });
+
   it('deja 1 unidad prestada del proyector y del parlante', async () => {
     await cargarDatosEjemplo(app.get(DataSource));
     const { body } = await request(app.getHttpServer())

@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AlertasModule } from './alertas/alertas.module.js';
 import { ArticulosModule } from './articulos/articulos.module.js';
+import { CatalogoModule } from './catalogo/catalogo.module.js';
 import { MovimientosModule } from './movimientos/movimientos.module.js';
 import { PrestamosModule } from './prestamos/prestamos.module.js';
 
@@ -28,6 +29,7 @@ import { PrestamosModule } from './prestamos/prestamos.module.js';
         synchronize: config.get<string>('NODE_ENV') !== 'production',
       }),
     }),
+    CatalogoModule,
     ArticulosModule,
     PrestamosModule,
     MovimientosModule,

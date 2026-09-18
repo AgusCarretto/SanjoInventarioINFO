@@ -4,6 +4,8 @@ import {
   crearApp,
   crearArticulo,
   crearPrestamo,
+  idCategoria,
+  idTipo,
   limpiarBase,
 } from './helpers.js';
 
@@ -90,7 +92,6 @@ describe('GET /api/alertas/stock (e2e)', () => {
     });
     await crearArticulo(app, {
       nombre: 'Solo nombre',
-      categoria: null,
       esRetornable: null,
       stockActual: null,
       stockMinimo: null,
@@ -98,6 +99,30 @@ describe('GET /api/alertas/stock (e2e)', () => {
     const { body } = await pedir();
     expect(body.items).toEqual([]);
     expect(body.resumen).toEqual({ total: 0, sinStock: 0, bajos: 0 });
+  });
+
+  it('cada alerta trae categoría, tipo, marca, modelo y compatibilidad para comprar lo correcto', async () => {
+    await crearArticulo(app, {
+      nombre: 'Tóner HP 26A',
+      categoriaId: await idCategoria(app, 'Impresoras'),
+      tipoId: await idTipo(app, 'Impresoras', 'Tóner'),
+      marca: 'HP',
+      modelo: '26A',
+      compatibilidad: 'LaserJet Pro M402, M426',
+      stockActual: 1,
+      stockMinimo: 3,
+    });
+    const { body } = await pedir();
+    expect(body.items[0]).toMatchObject({
+      nombre: 'Tóner HP 26A',
+      categoria: 'Impresoras',
+      tipo: 'Tóner',
+      marca: 'HP',
+      modelo: '26A',
+      compatibilidad: 'LaserJet Pro M402, M426',
+      faltante: 2,
+      nivel: 'BAJO',
+    });
   });
 
   it('sin artículos devuelve resumen en cero', async () => {

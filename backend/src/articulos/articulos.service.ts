@@ -1,10 +1,13 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Categoria } from '../catalogo/categoria.entity.js';
+import { TipoArticulo } from '../catalogo/tipo-articulo.entity.js';
 import { Movimiento } from '../movimientos/movimiento.entity.js';
 import { EstadoPrestamo, Prestamo } from '../prestamos/prestamo.entity.js';
 import {
@@ -15,6 +18,9 @@ import { Articulo } from './articulo.entity.js';
 import { CreateArticuloDto } from './dto/create-articulo.dto.js';
 import { UpdateArticuloDto } from './dto/update-articulo.dto.js';
 
+/** Relaciones que hace falta cargar para mostrar el nombre de la categoría y del tipo. */
+const RELACIONES = { categoria: true, tipo: true } as const;
+
 @Injectable()
 export class ArticulosService {
   constructor(
@@ -24,6 +30,10 @@ export class ArticulosService {
     private readonly prestamos: Repository<Prestamo>,
     @InjectRepository(Movimiento)
     private readonly movimientos: Repository<Movimiento>,
+    @InjectRepository(Categoria)
+    private readonly categorias: Repository<Categoria>,
+    @InjectRepository(TipoArticulo)
+    private readonly tipos: Repository<TipoArticulo>,
   ) {}
 
   /** ¿Tiene préstamos (activos o devueltos) o movimientos registrados? */
@@ -49,45 +59,94 @@ export class ArticulosService {
     );
   }
 
+  /**
+   * La categoría y el tipo tienen que existir en el catálogo, y el tipo tiene
+   * que pertenecer a esa categoría (no se puede elegir un tipo sin categoría).
+   */
+  private async validarReferencias(
+    categoriaId: number | null,
+    tipoId: number | null,
+  ): Promise<void> {
+    if (
+      categoriaId !== null &&
+      !(await this.categorias.existsBy({ id: categoriaId }))
+    ) {
+      throw new BadRequestException('La categoría elegida no existe');
+    }
+    if (tipoId === null) return;
+    if (categoriaId === null) {
+      throw new BadRequestException(
+        'Para elegir un tipo primero elegí una categoría',
+      );
+    }
+    const tipo = await this.tipos.findOneBy({ id: tipoId });
+    if (!tipo) throw new BadRequestException('El tipo elegido no existe');
+    if (tipo.categoriaId !== categoriaId) {
+      throw new BadRequestException(
+        'El tipo elegido no pertenece a la categoría',
+      );
+    }
+  }
+
+  /** Ordenados por el orden de la categoría en el catálogo, después por nombre; sin categoría al final. */
   async listarConDisponibilidad(): Promise<ArticuloConDisponibilidad[]> {
     const [lista, prestados] = await Promise.all([
-      this.articulos.find({ order: { categoria: 'ASC', nombre: 'ASC' } }),
+      this.articulos.find({
+        relations: RELACIONES,
+        order: {
+          categoria: { orden: 'ASC', nombre: 'ASC' },
+          nombre: 'ASC',
+        },
+      }),
       this.prestadosPorArticulo(),
     ]);
     return lista.map((a) => conDisponibilidad(a, prestados.get(a.id) ?? 0));
   }
 
   async obtener(id: number): Promise<ArticuloConDisponibilidad> {
-    const articulo = await this.articulos.findOneBy({ id });
+    const articulo = await this.articulos.findOne({
+      where: { id },
+      relations: RELACIONES,
+    });
     if (!articulo) throw new NotFoundException(`No existe el artículo ${id}`);
     const prestados = (await this.prestadosPorArticulo()).get(id) ?? 0;
     return conDisponibilidad(articulo, prestados);
   }
 
   async crear(dto: CreateArticuloDto): Promise<ArticuloConDisponibilidad> {
+    await this.validarReferencias(dto.categoriaId ?? null, dto.tipoId ?? null);
+    let id: number;
     try {
-      const articulo = await this.articulos.save(this.articulos.create(dto));
-      return conDisponibilidad(articulo, 0);
+      id = (await this.articulos.save(this.articulos.create(dto))).id;
     } catch (error) {
       throw this.traducirErrorDeBase(error);
     }
+    return this.obtener(id);
   }
 
   async actualizar(
     id: number,
     dto: UpdateArticuloDto,
   ): Promise<ArticuloConDisponibilidad> {
+    // Sin relaciones cargadas: al guardar, TypeORM usa las columnas categoria_id y tipo_id.
     const articulo = await this.articulos.findOneBy({ id });
     if (!articulo) throw new NotFoundException(`No existe el artículo ${id}`);
     const prestados = (await this.prestadosPorArticulo()).get(id) ?? 0;
-    // R1: el tipo se puede editar, pero no si ya hay historial que lo contradiga.
+
+    // Se valida el resultado final: cambiar solo la categoría no puede dejar un tipo ajeno.
+    await this.validarReferencias(
+      dto.categoriaId !== undefined ? dto.categoriaId : articulo.categoriaId,
+      dto.tipoId !== undefined ? dto.tipoId : articulo.tipoId,
+    );
+
+    // R1: el uso (retornable/consumible) se puede editar, pero no si ya hay historial.
     if (
       dto.esRetornable !== undefined &&
       dto.esRetornable !== articulo.esRetornable &&
       (await this.tieneHistorial(id))
     ) {
       throw new ConflictException(
-        'El artículo ya tiene préstamos o movimientos: no se puede cambiar su tipo',
+        'El artículo ya tiene préstamos o movimientos: no se puede cambiar su uso (retornable o consumible)',
       );
     }
     // R2: el total nunca puede quedar por debajo de lo que está prestado
@@ -111,7 +170,7 @@ export class ArticulosService {
     } catch (error) {
       throw this.traducirErrorDeBase(error);
     }
-    return conDisponibilidad(articulo, prestados);
+    return this.obtener(id);
   }
 
   async eliminar(id: number): Promise<void> {

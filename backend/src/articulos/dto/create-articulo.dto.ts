@@ -19,6 +19,8 @@ const textoOpcional = ({ value }: { value: unknown }) =>
 /**
  * Solo `nombre` es obligatorio. El resto puede omitirse o enviarse como null
  * (`@IsOptional` saltea las validaciones cuando el valor es null o undefined).
+ * Que la categoría y el tipo existan, y que el tipo pertenezca a la categoría,
+ * lo verifica el servicio contra el catálogo.
  */
 export class CreateArticuloDto {
   @Transform(recortar)
@@ -28,13 +30,37 @@ export class CreateArticuloDto {
   nombre: string;
 
   @IsOptional()
-  @Transform(textoOpcional)
-  @IsString({ message: 'La categoría tiene que ser un texto' })
-  @MaxLength(60, { message: 'La categoría puede tener hasta 60 caracteres' })
-  categoria?: string | null;
+  @IsInt({ message: 'La categoría no es válida' })
+  @Min(1, { message: 'La categoría no es válida' })
+  categoriaId?: number | null;
 
   @IsOptional()
-  @IsBoolean({ message: 'El tipo tiene que ser retornable o consumible' })
+  @IsInt({ message: 'El tipo no es válido' })
+  @Min(1, { message: 'El tipo no es válido' })
+  tipoId?: number | null;
+
+  @IsOptional()
+  @Transform(textoOpcional)
+  @IsString({ message: 'La marca tiene que ser un texto' })
+  @MaxLength(80, { message: 'La marca puede tener hasta 80 caracteres' })
+  marca?: string | null;
+
+  @IsOptional()
+  @Transform(textoOpcional)
+  @IsString({ message: 'El modelo tiene que ser un texto' })
+  @MaxLength(80, { message: 'El modelo puede tener hasta 80 caracteres' })
+  modelo?: string | null;
+
+  @IsOptional()
+  @Transform(textoOpcional)
+  @IsString({ message: 'La compatibilidad tiene que ser un texto' })
+  @MaxLength(255, {
+    message: 'La compatibilidad puede tener hasta 255 caracteres',
+  })
+  compatibilidad?: string | null;
+
+  @IsOptional()
+  @IsBoolean({ message: 'El uso tiene que ser retornable o consumible' })
   esRetornable?: boolean | null;
 
   @IsOptional()
