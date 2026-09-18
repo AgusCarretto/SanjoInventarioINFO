@@ -6,7 +6,7 @@ export default function NivelBadge({ nivel }) {
   if (!estilo) return null;
   const { Icono } = estilo;
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold ${estilo.insignia}`}>
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-semibold ${estilo.insignia}`}>
       <Icono className="size-3.5" aria-hidden="true" />
       {estilo.etiqueta}
     </span>

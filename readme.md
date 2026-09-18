@@ -76,7 +76,8 @@ Un artículo entra en alerta cuando `stock_actual <= stock_minimo`: **Sin stock*
 
 ## Estado
 
-- **Entrega 1 (esta):** artículos, alertas de stock y dashboard.
+- **Entrega 1:** artículos, alertas de stock y dashboard.
+- **Formulario de artículos:** desde la pantalla **Artículos** se pueden agregar, editar y eliminar artículos. Solo el nombre es obligatorio; categoría, tipo y stocks pueden quedar vacíos ("sin dato"). Un artículo sin stock actual o sin mínimo no genera alertas.
 - **Entrega 2:** préstamos y movimientos (endpoints y pantallas).
 
 Diseño completo: [docs/superpowers/specs/2026-09-18-sistema-stock-informatica-design.md](docs/superpowers/specs/2026-09-18-sistema-stock-informatica-design.md).

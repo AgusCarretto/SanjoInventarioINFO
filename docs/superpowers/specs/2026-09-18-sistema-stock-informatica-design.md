@@ -56,10 +56,10 @@ Puertos: Postgres 5432, backend 3000, frontend 5173. No hay `package.json` en la
 articulos
   id              serial PK
   nombre          varchar(120) UNIQUE NOT NULL
-  categoria       varchar(60)  NOT NULL
-  es_retornable   boolean      NOT NULL
-  stock_actual    int NOT NULL DEFAULT 0   CHECK (>= 0)   -- total del colegio
-  stock_minimo    int NOT NULL DEFAULT 0   CHECK (>= 0)
+  categoria       varchar(60)  NULL           -- solo el nombre es obligatorio
+  es_retornable   boolean      NULL           -- NULL = tipo sin definir
+  stock_actual    int NULL     CHECK (>= 0)   -- total del colegio; NULL = sin dato (no es 0)
+  stock_minimo    int NULL     CHECK (>= 0)
   created_at, updated_at   timestamptz
 
 prestamos                                    -- solo artículos retornables
@@ -92,7 +92,7 @@ Las restricciones CHECK viven en la base además de la validación de los DTOs.
 
 | # | Regla | Entrega |
 |---|---|---|
-| R1 | `es_retornable` no se puede modificar después de crear el artículo. Si se cargó mal, se elimina y se vuelve a crear (solo posible si no tiene historial). | 1 |
+| R1 | `es_retornable` se puede editar (incluso dejarlo sin definir) **mientras el artículo no tenga préstamos ni movimientos**; con historial, cambiarlo → 409. Reenviar el mismo valor no cuenta como cambio. *(Versión original: inmutable tras crear; relajada al agregar el formulario de edición.)* | 1 |
 | R2 | `stock_actual` no puede quedar por debajo de los `prestados` del artículo → 409. | 1 |
 | R3 | Un artículo con préstamos o movimientos no se puede eliminar → 409. | 1 |
 | R4 | **Prestar:** solo retornables; `cantidad <= disponibles`; transacción con lock pesimista sobre el artículo; no toca `stock_actual`. | 2 |
@@ -111,13 +111,13 @@ Prefijo `/api`. CORS solo para `http://localhost:5173` y `http://127.0.0.1:5173`
 | Préstamos | `GET /prestamos`, `POST /prestamos`, `PATCH /prestamos/:id/devolver` (estado devuelto: ACTIVO / DEVUELTO / ATRASADO) | 2 |
 | Movimientos | `GET /movimientos?articuloId=`, `POST /movimientos` | 2 |
 
-**Artículos.** `GET /articulos` devuelve cada artículo con `prestados`, `disponibles` y `nivel` (`null` si no está en alerta; `BAJO` o `SIN_STOCK` según la sección 7), ordenado por `categoria` y `nombre`. `CreateArticuloDto`: `nombre` (texto no vacío, máx. 120, sin espacios de más), `categoria` (máx. 60), `esRetornable` (booleano), `stockActual` y `stockMinimo` (enteros >= 0, por defecto 0). `UpdateArticuloDto` es el create parcial **sin** `esRetornable` (R1).
+**Artículos.** `GET /articulos` devuelve cada artículo con `prestados`, `disponibles` y `nivel` (`null` si no está en alerta; `BAJO` o `SIN_STOCK` según la sección 7), ordenado por `categoria` y `nombre`. `CreateArticuloDto`: solo `nombre` es obligatorio (texto no vacío, máx. 120, sin espacios de más, único). `categoria` (máx. 60; un texto vacío pasa a null), `esRetornable` (booleano), `stockActual` y `stockMinimo` (enteros >= 0) son opcionales y aceptan `null`, que significa "sin dato". `disponibles` es `null` si no hay stock actual. `UpdateArticuloDto` es el create parcial: todo se puede editar, con las reglas R1 y R2 (dejar el stock en `null` con unidades prestadas → 409).
 
 ## 7. Alertas de stock
 
 `GET /alertas/stock` no tiene tabla propia. `ArticulosService.listarConDisponibilidad()` es la única fuente de `prestados`, `disponibles` y `nivel` (este último calculado con `clasificarNivel`). `AlertasService` se queda en memoria con los artículos que tienen `nivel` y los ordena: con ~30 artículos no justifica SQL aparte. El frontend no repite la lógica de clasificación; usa el `nivel` que trae la API.
 
-- Entra el artículo si `stock_actual <= stock_minimo`.
+- Entra el artículo si `stock_actual <= stock_minimo`. Si falta el stock actual o el mínimo (`null`) no hay con qué comparar y no entra.
 - `nivel` = `SIN_STOCK` si `stock_actual = 0`; si no, `BAJO`. (Con mínimo 0 y stock 0 también es `SIN_STOCK`.)
 - `faltante = stock_minimo − stock_actual` (0 si está justo en el mínimo). La cantidad a comprar la decide una persona.
 - Orden: `SIN_STOCK` primero, después mayor `faltante`, después `nombre` (comparación `es`).
@@ -151,7 +151,8 @@ La función pura `clasificarNivel(stockActual, stockMinimo)` devuelve `null`, `'
 ### 8.2 Pantallas de la entrega 1
 
 - **Inicio:** una franja de resumen con 3 indicadores (**Artículos**, **En alerta**, **Sin stock**; en rojo suave cuando son > 0, neutros cuando son 0) y debajo el panel `AlertasStock`, que es el protagonista de la pantalla.
-- **Artículos:** tabla con nombre, categoría, tipo (retornable / consumible), stock total, mínimo, prestados y disponibles. Las filas en alerta llevan la misma marca visual que en el panel. `<th scope="col">` en los encabezados.
+- **Artículos:** tabla con nombre, categoría, tipo (retornable / consumible), stock total, mínimo, prestados y disponibles. Las filas en alerta llevan la misma marca visual que en el panel. `<th scope="col">` en los encabezados. Lo que está vacío se muestra como "Sin categoría", "Sin definir" o "Sin dato", y el estado de un artículo sin stock o sin mínimo es "Sin dato de stock" (no genera alerta).
+- **Formulario de artículos:** botón "Nuevo artículo" arriba de la tabla y, en cada fila, acciones de editar y eliminar (solo con ícono, con nombre accesible). Alta y edición usan la misma ventana modal (`<dialog>` nativo) con nombre, categoría (con sugerencias de las existentes), tipo (sin definir / consumible / retornable), stock actual y stock mínimo. Los campos vacíos se guardan como `null`; los errores del servidor (nombre repetido, tipo con historial) se muestran dentro de la ventana. El tipo queda bloqueado si el artículo tiene unidades prestadas. Eliminar pide confirmación y el servidor lo frena si hay préstamos o movimientos (R3).
 
 ### 8.3 Componente `AlertasStock` (`components/dashboard/AlertasStock.jsx`)
 
