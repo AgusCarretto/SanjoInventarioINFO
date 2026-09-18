@@ -1,0 +1,16 @@
+# Dependencias y builds
+node_modules/
+dist/
+build/
+coverage/
+
+# Secretos locales (.env.example y .env.test sí se versionan: no llevan claves)
+.env
+.env.local
+.env.*.local
+
+# Logs y basura del sistema
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
