@@ -21,18 +21,20 @@ export class Articulo {
   @Column({ type: 'varchar', length: 120, unique: true })
   nombre: string;
 
-  @Column({ type: 'varchar', length: 60 })
-  categoria: string;
+  // Solo el nombre es obligatorio. Un null significa "sin dato", no cero.
+  @Column({ type: 'varchar', length: 60, nullable: true })
+  categoria: string | null;
 
-  @Column({ name: 'es_retornable', type: 'boolean' })
-  esRetornable: boolean;
+  /** null = tipo sin definir todavía. */
+  @Column({ name: 'es_retornable', type: 'boolean', nullable: true })
+  esRetornable: boolean | null;
 
   /** Total del colegio. No baja al prestar: lo prestado se calcula aparte. */
-  @Column({ name: 'stock_actual', type: 'int', default: 0 })
-  stockActual: number;
+  @Column({ name: 'stock_actual', type: 'int', nullable: true })
+  stockActual: number | null;
 
-  @Column({ name: 'stock_minimo', type: 'int', default: 0 })
-  stockMinimo: number;
+  @Column({ name: 'stock_minimo', type: 'int', nullable: true })
+  stockMinimo: number | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

@@ -42,6 +42,35 @@ describe('Esquema de base de datos', () => {
     );
   });
 
+  it('solo el nombre es obligatorio: el resto de las columnas acepta null', async () => {
+    const filas: { column_name: string; is_nullable: string }[] = await ds.query(
+      "SELECT column_name, is_nullable FROM information_schema.columns WHERE table_name = 'articulos'",
+    );
+    const anulable = (col: string) =>
+      filas.find((f) => f.column_name === col)?.is_nullable;
+    expect(anulable('nombre')).toBe('NO');
+    for (const col of [
+      'categoria',
+      'es_retornable',
+      'stock_actual',
+      'stock_minimo',
+    ]) {
+      expect(anulable(col)).toBe('YES');
+    }
+  });
+
+  it('un artículo con solo el nombre se guarda con todo lo demás en null', async () => {
+    const repo = ds.getRepository(Articulo);
+    const guardado = await repo.save(repo.create({ nombre: 'Solo nombre' }));
+    const leido = await repo.findOneByOrFail({ id: guardado.id });
+    expect(leido).toMatchObject({
+      categoria: null,
+      esRetornable: null,
+      stockActual: null,
+      stockMinimo: null,
+    });
+  });
+
   it('rechaza un stock_actual negativo (CHECK)', async () => {
     const repo = ds.getRepository(Articulo);
     await expect(

@@ -4,6 +4,7 @@ import { EstadoPrestamo } from '../src/prestamos/prestamo.entity.js';
 import {
   crearApp,
   crearArticulo,
+  crearMovimiento,
   crearPrestamo,
   limpiarBase,
 } from './helpers.js';
@@ -103,27 +104,70 @@ describe('Artículos (e2e)', () => {
   });
 
   describe('POST /api/articulos', () => {
-    it('crea el artículo, recorta espacios y usa stock 0 por defecto', async () => {
+    it('crea el artículo con todos los datos, recortando espacios', async () => {
       const { body } = await request(app.getHttpServer())
         .post('/api/articulos')
         .send({
           nombre: '  Mouse USB  ',
-          categoria: 'Periféricos',
+          categoria: '  Periféricos ',
           esRetornable: false,
+          stockActual: 2,
+          stockMinimo: 5,
         })
         .expect(201);
       expect(body).toMatchObject({
         nombre: 'Mouse USB',
-        stockActual: 0,
-        stockMinimo: 0,
+        categoria: 'Periféricos',
+        esRetornable: false,
+        stockActual: 2,
+        stockMinimo: 5,
         prestados: 0,
-        disponibles: 0,
-        nivel: 'SIN_STOCK',
+        disponibles: 2,
+        nivel: 'BAJO',
+      });
+    });
+
+    it('crea un artículo con solo el nombre: lo demás queda en null y no hay alerta', async () => {
+      const { body } = await request(app.getHttpServer())
+        .post('/api/articulos')
+        .send({ nombre: 'Router de prueba' })
+        .expect(201);
+      expect(body).toMatchObject({
+        nombre: 'Router de prueba',
+        categoria: null,
+        esRetornable: null,
+        stockActual: null,
+        stockMinimo: null,
+        prestados: 0,
+        disponibles: null,
+        nivel: null,
+      });
+    });
+
+    it('acepta null explícito y trata la categoría vacía como null', async () => {
+      const { body } = await request(app.getHttpServer())
+        .post('/api/articulos')
+        .send({
+          nombre: 'Con nulos',
+          categoria: '   ',
+          esRetornable: null,
+          stockActual: null,
+          stockMinimo: null,
+        })
+        .expect(201);
+      expect(body).toMatchObject({
+        categoria: null,
+        esRetornable: null,
+        stockActual: null,
+        stockMinimo: null,
       });
     });
 
     it.each([
       ['nombre vacío', { nombre: '', categoria: 'X', esRetornable: false }],
+      ['nombre de solo espacios', { nombre: '   ' }],
+      ['sin nombre', { categoria: 'X' }],
+      ['nombre null', { nombre: null }],
       [
         'stock negativo',
         { nombre: 'A', categoria: 'X', esRetornable: false, stockActual: -1 },
@@ -174,12 +218,92 @@ describe('Artículos (e2e)', () => {
       });
     });
 
-    it('R1: rechaza cambiar esRetornable', async () => {
-      const a = await crearArticulo(app, { nombre: 'Cable' });
+    it('permite dejar en null categoría, tipo y stocks', async () => {
+      const a = await crearArticulo(app, {
+        nombre: 'Cable',
+        categoria: 'Cables',
+        esRetornable: false,
+        stockActual: 3,
+        stockMinimo: 5,
+      });
+      const { body } = await request(app.getHttpServer())
+        .patch(`/api/articulos/${a.id}`)
+        .send({
+          categoria: null,
+          esRetornable: null,
+          stockActual: null,
+          stockMinimo: null,
+        })
+        .expect(200);
+      expect(body).toMatchObject({
+        categoria: null,
+        esRetornable: null,
+        stockActual: null,
+        stockMinimo: null,
+        disponibles: null,
+        nivel: null,
+      });
+    });
+
+    it('R1: permite cambiar el tipo si el artículo no tiene historial', async () => {
+      const a = await crearArticulo(app, { nombre: 'Cable', esRetornable: false });
+      const { body } = await request(app.getHttpServer())
+        .patch(`/api/articulos/${a.id}`)
+        .send({ esRetornable: true })
+        .expect(200);
+      expect(body.esRetornable).toBe(true);
+    });
+
+    it('R1: rechaza cambiar el tipo si tiene préstamos', async () => {
+      const a = await crearArticulo(app, {
+        nombre: 'Proyector',
+        esRetornable: true,
+        stockActual: 2,
+      });
+      await crearPrestamo(app, { articuloId: a.id });
+      await request(app.getHttpServer())
+        .patch(`/api/articulos/${a.id}`)
+        .send({ esRetornable: false })
+        .expect(409);
+    });
+
+    it('R1: rechaza cambiar el tipo si tiene movimientos', async () => {
+      const a = await crearArticulo(app, {
+        nombre: 'Pilas',
+        esRetornable: false,
+        stockActual: 5,
+      });
+      await crearMovimiento(app, { articuloId: a.id });
       await request(app.getHttpServer())
         .patch(`/api/articulos/${a.id}`)
         .send({ esRetornable: true })
-        .expect(400);
+        .expect(409);
+    });
+
+    it('R1: reenviar el mismo tipo no es un cambio, aunque haya historial', async () => {
+      const a = await crearArticulo(app, {
+        nombre: 'Proyector',
+        esRetornable: true,
+        stockActual: 2,
+      });
+      await crearPrestamo(app, { articuloId: a.id });
+      await request(app.getHttpServer())
+        .patch(`/api/articulos/${a.id}`)
+        .send({ esRetornable: true, categoria: 'Equipos' })
+        .expect(200);
+    });
+
+    it('R2: no deja el stock sin dato (null) si hay unidades prestadas', async () => {
+      const a = await crearArticulo(app, {
+        nombre: 'Proyector',
+        esRetornable: true,
+        stockActual: 4,
+      });
+      await crearPrestamo(app, { articuloId: a.id, cantidad: 1 });
+      await request(app.getHttpServer())
+        .patch(`/api/articulos/${a.id}`)
+        .send({ stockActual: null })
+        .expect(409);
     });
 
     it('R2: rechaza dejar el stock por debajo de lo prestado y acepta igualarlo', async () => {

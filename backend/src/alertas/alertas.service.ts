@@ -15,8 +15,10 @@ export class AlertasService {
 
   async obtenerAlertasDeStock(): Promise<AlertasStockRespuesta> {
     const lista = await this.articulos.listarConDisponibilidad();
+    // Un nivel solo existe si hay stock actual y mínimo; se comprueba también
+    // acá para que TypeScript sepa que ambos son números.
     const items: AlertaStockItem[] = lista.flatMap((a) =>
-      a.nivel === null
+      a.nivel === null || a.stockActual === null || a.stockMinimo === null
         ? []
         : [
             {
@@ -29,7 +31,7 @@ export class AlertasService {
               faltante: a.stockMinimo - a.stockActual,
               nivel: a.nivel,
               prestados: a.prestados,
-              disponibles: a.disponibles,
+              disponibles: a.stockActual - a.prestados,
             },
           ],
     );

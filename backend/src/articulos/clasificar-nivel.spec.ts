@@ -19,4 +19,14 @@ describe('clasificarNivel', () => {
   it('devuelve null con mínimo 0 y stock 1', () => {
     expect(clasificarNivel(1, 0)).toBeNull();
   });
+  it('devuelve null si no se cargó el stock actual', () => {
+    expect(clasificarNivel(null, 5)).toBeNull();
+  });
+  it('devuelve null si no se cargó el stock mínimo', () => {
+    expect(clasificarNivel(0, null)).toBeNull();
+    expect(clasificarNivel(3, null)).toBeNull();
+  });
+  it('devuelve null si faltan ambos datos', () => {
+    expect(clasificarNivel(null, null)).toBeNull();
+  });
 });

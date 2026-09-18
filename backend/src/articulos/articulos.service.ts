@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Movimiento } from '../movimientos/movimiento.entity.js';
 import { EstadoPrestamo, Prestamo } from '../prestamos/prestamo.entity.js';
 import {
   ArticuloConDisponibilidad,
@@ -21,7 +22,18 @@ export class ArticulosService {
     private readonly articulos: Repository<Articulo>,
     @InjectRepository(Prestamo)
     private readonly prestamos: Repository<Prestamo>,
+    @InjectRepository(Movimiento)
+    private readonly movimientos: Repository<Movimiento>,
   ) {}
+
+  /** ¿Tiene préstamos (activos o devueltos) o movimientos registrados? */
+  private async tieneHistorial(articuloId: number): Promise<boolean> {
+    const [prestamos, movimientos] = await Promise.all([
+      this.prestamos.count({ where: { articuloId } }),
+      this.movimientos.count({ where: { articuloId } }),
+    ]);
+    return prestamos + movimientos > 0;
+  }
 
   /** Unidades en préstamo ACTIVO, por artículo. */
   private async prestadosPorArticulo(): Promise<Map<number, number>> {
@@ -68,11 +80,30 @@ export class ArticulosService {
     const articulo = await this.articulos.findOneBy({ id });
     if (!articulo) throw new NotFoundException(`No existe el artículo ${id}`);
     const prestados = (await this.prestadosPorArticulo()).get(id) ?? 0;
-    // R2: el total nunca puede quedar por debajo de lo que está prestado.
-    if (dto.stockActual !== undefined && dto.stockActual < prestados) {
+    // R1: el tipo se puede editar, pero no si ya hay historial que lo contradiga.
+    if (
+      dto.esRetornable !== undefined &&
+      dto.esRetornable !== articulo.esRetornable &&
+      (await this.tieneHistorial(id))
+    ) {
       throw new ConflictException(
-        `No se puede dejar el stock en ${dto.stockActual}: hay ${prestados} unidades prestadas`,
+        'El artículo ya tiene préstamos o movimientos: no se puede cambiar su tipo',
       );
+    }
+    // R2: el total nunca puede quedar por debajo de lo que está prestado
+    // (y dejarlo sin dato equivale a perder ese total).
+    if (dto.stockActual !== undefined) {
+      if (dto.stockActual === null) {
+        if (prestados > 0) {
+          throw new ConflictException(
+            `No se puede dejar el stock sin dato: hay ${prestados} unidades prestadas`,
+          );
+        }
+      } else if (dto.stockActual < prestados) {
+        throw new ConflictException(
+          `No se puede dejar el stock en ${dto.stockActual}: hay ${prestados} unidades prestadas`,
+        );
+      }
     }
     Object.assign(articulo, dto);
     try {

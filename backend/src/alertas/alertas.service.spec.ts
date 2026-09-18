@@ -84,6 +84,20 @@ describe('AlertasService', () => {
     });
   });
 
+  it('ignora los artículos sin stock actual o sin mínimo cargado', async () => {
+    const r = await servicioCon([
+      art(1, 'Sin stock cargado', 0, 5, {
+        stockActual: null,
+        disponibles: null,
+        nivel: null,
+      }),
+      art(2, 'Sin mínimo', 0, 5, { stockMinimo: null, nivel: null }),
+      art(3, 'Bajo', 3, 5),
+    ]).obtenerAlertasDeStock();
+    expect(r.items.map((i) => i.nombre)).toEqual(['Bajo']);
+    expect(r.resumen).toEqual({ total: 1, sinStock: 0, bajos: 1 });
+  });
+
   it('sin alertas devuelve resumen en cero y lista vacía', async () => {
     const r = await servicioCon([art(1, 'Ok', 10, 5)]).obtenerAlertasDeStock();
     expect(r.resumen).toEqual({ total: 0, sinStock: 0, bajos: 0 });

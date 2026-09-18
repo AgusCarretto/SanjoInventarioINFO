@@ -77,6 +77,29 @@ describe('GET /api/alertas/stock (e2e)', () => {
     });
   });
 
+  it('un artículo sin stock o sin mínimo cargado no entra en las alertas', async () => {
+    await crearArticulo(app, {
+      nombre: 'Sin stock cargado',
+      stockActual: null,
+      stockMinimo: 5,
+    });
+    await crearArticulo(app, {
+      nombre: 'Sin mínimo',
+      stockActual: 0,
+      stockMinimo: null,
+    });
+    await crearArticulo(app, {
+      nombre: 'Solo nombre',
+      categoria: null,
+      esRetornable: null,
+      stockActual: null,
+      stockMinimo: null,
+    });
+    const { body } = await pedir();
+    expect(body.items).toEqual([]);
+    expect(body.resumen).toEqual({ total: 0, sinStock: 0, bajos: 0 });
+  });
+
   it('sin artículos devuelve resumen en cero', async () => {
     const { body } = await pedir();
     expect(body.resumen).toEqual({ total: 0, sinStock: 0, bajos: 0 });

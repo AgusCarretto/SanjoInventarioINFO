@@ -1,7 +1,6 @@
-import { OmitType, PartialType } from '@nestjs/mapped-types';
+import { PartialType } from '@nestjs/mapped-types';
 import { CreateArticuloDto } from './create-articulo.dto.js';
 
-// R1: esRetornable no se puede modificar después de crear el artículo.
-export class UpdateArticuloDto extends PartialType(
-  OmitType(CreateArticuloDto, ['esRetornable'] as const),
-) {}
+// Todo se puede editar. Si se cambia el tipo (esRetornable) el servicio verifica
+// que el artículo no tenga préstamos ni movimientos.
+export class UpdateArticuloDto extends PartialType(CreateArticuloDto) {}

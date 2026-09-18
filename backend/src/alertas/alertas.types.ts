@@ -3,8 +3,8 @@ import { NivelAlerta } from '../articulos/clasificar-nivel.js';
 export interface AlertaStockItem {
   id: number;
   nombre: string;
-  categoria: string;
-  esRetornable: boolean;
+  categoria: string | null;
+  esRetornable: boolean | null;
   stockActual: number;
   stockMinimo: number;
   /** stock_minimo − stock_actual; 0 si está justo en el mínimo. */

@@ -4,6 +4,10 @@ import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module.js';
 import { configurarApp } from '../src/app.setup.js';
 import { Articulo } from '../src/articulos/articulo.entity.js';
+import {
+  Movimiento,
+  TipoMovimiento,
+} from '../src/movimientos/movimiento.entity.js';
 import { EstadoPrestamo, Prestamo } from '../src/prestamos/prestamo.entity.js';
 
 export async function crearApp(): Promise<INestApplication> {
@@ -45,6 +49,16 @@ export async function crearArticulo(
       stockMinimo: 0,
       ...datos,
     }),
+  );
+}
+
+export async function crearMovimiento(
+  app: INestApplication,
+  datos: { articuloId: number } & Partial<Movimiento>,
+): Promise<Movimiento> {
+  const repo = app.get(DataSource).getRepository(Movimiento);
+  return repo.save(
+    repo.create({ tipo: TipoMovimiento.ENTRADA, cantidad: 1, ...datos }),
   );
 }
 
