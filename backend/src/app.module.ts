@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AlertasModule } from './alertas/alertas.module.js';
 import { ArticulosModule } from './articulos/articulos.module.js';
 import { MovimientosModule } from './movimientos/movimientos.module.js';
 import { PrestamosModule } from './prestamos/prestamos.module.js';
@@ -30,6 +31,7 @@ import { PrestamosModule } from './prestamos/prestamos.module.js';
     ArticulosModule,
     PrestamosModule,
     MovimientosModule,
+    AlertasModule,
   ],
 })
 export class AppModule {}
