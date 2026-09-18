@@ -26,7 +26,11 @@
 
 Todo corre contra el Postgres local real (`localhost:5432`, usuario `postgres`, con la clave que el usuario indicó; vive solo en `backend/.env`, que no se versiona). `InventarioInformatica` ya existía y estaba vacía; `InventarioInformatica_test` se creó para los e2e. Las otras bases del servidor (`Truco-Uruguayo`, `asado-y-acero`, `postgres`) no se tocan. Los e2e solo borran datos si el nombre de la base termina en `_test`.
 
-## Ajustes por las versiones realmente instaladas (Task 1)
+## Ajustes surgidos durante la ejecución
+
+Al final de esta sección están los ajustes de diseño y de código del frontend (puntos 7 a 10); los bloques de código de las tareas 7 a 10 son el punto de partida, y el código final es el del repositorio.
+
+### Por las versiones realmente instaladas (Task 1)
 
 El scaffold de `nest new` trajo **Nest 12.0.3 en modo ESM** (`"type": "module"`), **TypeORM 1.1.1**, `@nestjs/typeorm` 12.0.1, TypeScript 6 y **Vitest 4 en lugar de Jest**. Todo el código de este plan se lee con estas reglas, que pisan lo que diga cada bloque de código:
 
@@ -36,6 +40,13 @@ El scaffold de `nest new` trajo **Nest 12.0.3 en modo ESM** (`"type": "module"`)
 4. `src/main.ts` usa top-level `await bootstrap()`. El lint del backend es `npm run lint` (oxlint con tipos).
 5. `strict: true` en `tsconfig.json` (con `strictPropertyInitialization: false`, así que las propiedades de entidades no llevan `!`).
 6. **SQLSTATE de la FK (Task 4):** con `ON DELETE RESTRICT` Postgres informa `23001` (restrict_violation), no `23503`. `traducirErrorDeBase` mapea a 409 tanto `23001` como `23503` (más `23505` para UNIQUE). Verificado con una transacción de prueba en psql.
+
+### Frontend (tareas 7 a 10)
+
+7. **Versiones reales:** `create-vite` 9.2.1 (se usó `--no-interactive`), React 19.3, Vite 8.3, Tailwind 4.3, React Router 7.18, lucide-react 1.47, Vitest 5. El scaffold ya trae oxlint y el script `lint`.
+8. **Diseño (guía frontend-design, revisada contra los tics genéricos):** una franja de resumen con divisores en lugar de tres tarjetas con sombra; sin sombras en ningún contenedor; encabezados de tabla en minúscula; sin textos de contexto unidos por puntos medios (el contexto de un retornable va en su propia línea: "N prestados y M disponibles"); marca "Informática" con el nombre del colegio debajo; botón "Descargar reporte de compra" en lugar de "Descargar CSV"; el mensaje de error explica cómo resolverlo.
+9. **`useApi`:** deriva `loading` al renderizar (el último resultado solo vale si su clave `path#versión` coincide con la actual) en vez de llamar a `setState` dentro del efecto, que oxlint marca (`react/set-state-in-effect`).
+10. **Dos correcciones que aparecieron al mirar el resultado real:** el contenedor con scroll de la tabla de Artículos lleva `relative` (los `sr-only` son absolutos y, sin ancestro posicionado, escapaban del recorte y ensanchaban toda la página en móvil); y la tercera columna de las filas de alerta mide `8rem` fijos (con `auto` las barras arrancaban 4 px corridas de una fila a otra). El encabezado "Artículo" lleva `border-l-4 border-transparent` para alinearse con el riel de color de las filas.
 
 ## File Structure
 

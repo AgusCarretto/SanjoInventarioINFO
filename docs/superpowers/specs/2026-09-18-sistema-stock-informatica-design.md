@@ -143,14 +143,14 @@ La función pura `clasificarNivel(stockActual, stockMinimo)` devuelve `null`, `'
 
 ### 8.1 Layout y navegación
 
-- Barra lateral fija en `marino-950` (`#0A192F`) con "Sanjo · Informática" e ítems **Inicio**, **Artículos**, **Préstamos**, **Movimientos** (`NavLink`, ítem activo resaltado). Bajo el breakpoint `lg` pasa a una barra superior con menú desplegable.
+- Barra lateral fija en `marino-950` (`#0A192F`) con "Informática" (y debajo el nombre del colegio) e ítems **Inicio**, **Artículos**, **Préstamos**, **Movimientos** (`NavLink`, ítem activo resaltado). Bajo el breakpoint `lg` pasa a una barra superior con menú desplegable.
 - Área de contenido blanca / gris muy claro con encabezado de página.
 - Rutas: `/` Inicio, `/articulos`, `/prestamos`, `/movimientos`. Las dos últimas muestran "Próximamente" en la entrega 1.
 - URL de la API desde `VITE_API_URL` (por defecto `http://localhost:3000/api`). `lib/api.js` envuelve `fetch`; `hooks/useApi.js` devuelve `{ data, error, loading, reload }`. TanStack Query se evalúa en la entrega 2, cuando haya mutaciones que refrescar.
 
 ### 8.2 Pantallas de la entrega 1
 
-- **Inicio:** 3 tarjetas KPI (**Artículos**, **En alerta**, **Sin stock**; en rojo suave cuando son > 0, neutras cuando son 0) y debajo el panel `AlertasStock`.
+- **Inicio:** una franja de resumen con 3 indicadores (**Artículos**, **En alerta**, **Sin stock**; en rojo suave cuando son > 0, neutros cuando son 0) y debajo el panel `AlertasStock`, que es el protagonista de la pantalla.
 - **Artículos:** tabla con nombre, categoría, tipo (retornable / consumible), stock total, mínimo, prestados y disponibles. Las filas en alerta llevan la misma marca visual que en el panel. `<th scope="col">` en los encabezados.
 
 ### 8.3 Componente `AlertasStock` (`components/dashboard/AlertasStock.jsx`)
@@ -160,10 +160,10 @@ La función pura `clasificarNivel(stockActual, stockMinimo)` devuelve `null`, `'
   - insignia de nivel: `SIN_STOCK` = rojo, ícono y texto "Sin stock"; `BAJO` = ámbar, ícono y texto "Stock bajo". Nunca solo color, para que también se lea impreso en blanco y negro;
   - barra `stock_actual / stock_minimo` (ancho = `min(100, stockActual / stockMinimo × 100)`, 0 si el mínimo es 0);
   - faltante ("Faltan N", o "En el mínimo" si es 0);
-  - solo en retornables: "N prestados · M disponibles".
+  - solo en retornables, en una línea propia: "N prestados y M disponibles".
 - **Sin alertas:** estado verde "Todo el stock está por encima del mínimo".
 - **Cargando / error:** estados explícitos; el error dice "No se pudo conectar con el servidor" y ofrece "Reintentar".
-- **Reporte de compra:** botón "Descargar CSV" que arma el archivo en el navegador con los ítems mostrados. Columnas: Artículo, Categoría, Tipo, Stock actual, Stock mínimo, Faltante, Nivel. Separador `;` y BOM UTF-8, para que Excel en español abra bien columnas y acentos. Nombre: `reporte-compra-AAAA-MM-DD.csv`.
+- **Reporte de compra:** botón "Descargar reporte de compra" que arma el archivo CSV en el navegador con los ítems mostrados. Columnas: Artículo, Categoría, Tipo, Stock actual, Stock mínimo, Faltante, Nivel. Separador `;` y BOM UTF-8, para que Excel en español abra bien columnas y acentos. Nombre: `reporte-compra-AAAA-MM-DD.csv`.
 - Elementos interactivos con `focus-visible:ring`.
 
 ### 8.4 Paleta y tipografía (`frontend/src/index.css`)
