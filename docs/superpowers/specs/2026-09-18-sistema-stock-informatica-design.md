@@ -111,11 +111,11 @@ Prefijo `/api`. CORS solo para `http://localhost:5173` y `http://127.0.0.1:5173`
 | Préstamos | `GET /prestamos`, `POST /prestamos`, `PATCH /prestamos/:id/devolver` (estado devuelto: ACTIVO / DEVUELTO / ATRASADO) | 2 |
 | Movimientos | `GET /movimientos?articuloId=`, `POST /movimientos` | 2 |
 
-**Artículos.** `GET /articulos` devuelve cada artículo con `prestados` y `disponibles`, ordenado por `categoria` y `nombre`. `CreateArticuloDto`: `nombre` (texto no vacío, máx. 120, sin espacios de más), `categoria` (máx. 60), `esRetornable` (booleano), `stockActual` y `stockMinimo` (enteros >= 0, por defecto 0). `UpdateArticuloDto` es el create parcial **sin** `esRetornable` (R1).
+**Artículos.** `GET /articulos` devuelve cada artículo con `prestados`, `disponibles` y `nivel` (`null` si no está en alerta; `BAJO` o `SIN_STOCK` según la sección 7), ordenado por `categoria` y `nombre`. `CreateArticuloDto`: `nombre` (texto no vacío, máx. 120, sin espacios de más), `categoria` (máx. 60), `esRetornable` (booleano), `stockActual` y `stockMinimo` (enteros >= 0, por defecto 0). `UpdateArticuloDto` es el create parcial **sin** `esRetornable` (R1).
 
 ## 7. Alertas de stock
 
-`GET /alertas/stock` no tiene tabla propia. `AlertasService` toma `ArticulosService.listarConDisponibilidad()` (única fuente de `prestados`) y filtra en memoria: con ~30 artículos no justifica SQL aparte.
+`GET /alertas/stock` no tiene tabla propia. `ArticulosService.listarConDisponibilidad()` es la única fuente de `prestados`, `disponibles` y `nivel` (este último calculado con `clasificarNivel`). `AlertasService` se queda en memoria con los artículos que tienen `nivel` y los ordena: con ~30 artículos no justifica SQL aparte. El frontend no repite la lógica de clasificación; usa el `nivel` que trae la API.
 
 - Entra el artículo si `stock_actual <= stock_minimo`.
 - `nivel` = `SIN_STOCK` si `stock_actual = 0`; si no, `BAJO`. (Con mínimo 0 y stock 0 también es `SIN_STOCK`.)
@@ -195,9 +195,9 @@ La función pura `clasificarNivel(stockActual, stockMinimo)` devuelve `null`, `'
 
 ## 9. Configuración del backend
 
-- `.env` (fuera de git; `.env.example` sí va): `DB_HOST=localhost`, `DB_PORT=5432`, `DB_USER=sanjo_app`, `DB_PASSWORD=...`, `DB_NAME=sanjo_inventario`, `PORT=3000`.
+- `.env` (fuera de git; `.env.example` sí va): `DB_HOST=localhost`, `DB_PORT=5432`, `DB_USER=postgres`, `DB_PASSWORD=...`, `DB_NAME=InventarioInformatica`, `PORT=3000`. Nombre de base y usuario elegidos por el usuario. Las variables ya definidas en el entorno del proceso tienen prioridad sobre el archivo.
 - `@nestjs/config` global; `TypeOrmModule.forRootAsync` con `autoLoadEntities: true` y `synchronize: process.env.NODE_ENV !== 'production'`. Cada módulo registra su entidad con `forFeature`.
-- Tests e2e usan `.env.test` con `DB_NAME=sanjo_inventario_test`.
+- Tests e2e: con `NODE_ENV=test` el config lee primero `.env.test` (versionado, sin claves, solo `DB_NAME=InventarioInformatica_test`) y después `.env` para host, usuario y clave. Antes de borrar datos, los tests verifican que el nombre de la base termine en `_test`.
 - **Seed** (`npm run seed`): solo corre si `articulos` está vacía (nunca pisa datos). Carga 10 artículos y 2 préstamos ACTIVO de ejemplo (uno vencido ayer, otro a varios días):
 
   | Artículo | Categoría | Tipo | Stock / Mín. | Nivel esperado |
@@ -216,8 +216,8 @@ La función pura `clasificarNivel(stockActual, stockMinimo)` devuelve `null`, `'
 ## 10. Testing
 
 - **Unitarios (Jest, viene con Nest):** `clasificarNivel` en sus bordes (stock > mínimo → `null`; stock = mínimo → `BAJO`; stock = 0 → `SIN_STOCK`; mínimo 0 con stock 0 → `SIN_STOCK`; mínimo 0 con stock 1 → `null`). `AlertasService`: orden, `faltante` y `resumen` con un `ArticulosService` simulado.
-- **E2E contra `sanjo_inventario_test`:** `GET /api/alertas/stock` con datos cargados por repositorio; `prestados` y `disponibles` correctos en `GET /api/articulos` y en alertas con un préstamo ACTIVO insertado directamente; `PATCH` con `stockActual` menor a lo prestado → 409 (R2); `DELETE` de un artículo con préstamo → 409 (R3); `PATCH` con `esRetornable` → 400 (R1).
-- **Frontend:** sin suite automática, igual que `sanjoActivities`. Se verifica levantando ambas apps con el seed.
+- **E2E contra `InventarioInformatica_test`:** `GET /api/alertas/stock` con datos cargados por repositorio; `prestados` y `disponibles` correctos en `GET /api/articulos` y en alertas con un préstamo ACTIVO insertado directamente; `PATCH` con `stockActual` menor a lo prestado → 409 (R2); `DELETE` de un artículo con préstamo → 409 (R3); `PATCH` con `esRetornable` → 400 (R1).
+- **Frontend:** Vitest solo para las funciones puras (armado del CSV con su escapado, y el porcentaje de la barra de stock). Las pantallas no llevan tests automáticos, igual que `sanjoActivities`: se verifican levantando ambas apps con el seed.
 
 ## 11. Alcance
 
@@ -239,11 +239,13 @@ La función pura `clasificarNivel(stockActual, stockMinimo)` devuelve `null`, `'
 Secuencia prevista, en PowerShell. Los flags exactos de `nest new` y `create vite` se validan contra la versión instalada al ejecutar el plan.
 
 ```powershell
-# 0. Base de datos (una sola vez). Pide la contraseña de "postgres" que se definió al instalar Postgres.
+# 0. Base de datos (una sola vez). Pide la contraseña del usuario postgres.
+#    Las comillas dobles conservan las mayúsculas del nombre.
 $psql = "C:\Program Files\PostgreSQL\18\bin\psql.exe"
-& $psql -U postgres -h localhost -c "CREATE USER sanjo_app WITH PASSWORD 'elegir_una_clave';"
-& $psql -U postgres -h localhost -c "CREATE DATABASE sanjo_inventario OWNER sanjo_app;"
-& $psql -U postgres -h localhost -c "CREATE DATABASE sanjo_inventario_test OWNER sanjo_app;"
+@'
+CREATE DATABASE "InventarioInformatica";
+CREATE DATABASE "InventarioInformatica_test";
+'@ | & $psql -U postgres -h localhost
 
 # 1. Backend
 cd sanjoInventario
@@ -259,7 +261,7 @@ cd ..
 npm create vite@latest frontend -- --template react
 cd frontend
 npm i react-router-dom lucide-react
-npm i -D tailwindcss @tailwindcss/vite oxlint
+npm i -D tailwindcss @tailwindcss/vite oxlint vitest
 npm run dev                 # http://localhost:5173
 ```
 
@@ -267,7 +269,7 @@ npm run dev                 # http://localhost:5173
 
 | Pedido | Resultado |
 |---|---|
-| 1. `docker-compose.yml` | No se genera (decisión 2): se usa el Postgres local; el reemplazo son el `.env` y los comandos `CREATE USER` / `CREATE DATABASE` de la sección 12. |
+| 1. `docker-compose.yml` | No se genera (decisión 2): se usa el Postgres local; el reemplazo son el `.env` y los comandos `CREATE DATABASE` de la sección 12. |
 | 2. Entidades TypeORM | Sección 4. |
 | 3. `tailwind.config.js` | No se genera (decisión 4): la paleta marino y blanco está en `frontend/src/index.css` con `@theme` (sección 8.4). |
 | 4. Dashboard React con Alertas de Stock | Sección 8. |
