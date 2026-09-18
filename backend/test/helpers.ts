@@ -3,6 +3,8 @@ import { Test } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module.js';
 import { configurarApp } from '../src/app.setup.js';
+import { Articulo } from '../src/articulos/articulo.entity.js';
+import { EstadoPrestamo, Prestamo } from '../src/prestamos/prestamo.entity.js';
 
 export async function crearApp(): Promise<INestApplication> {
   if (process.env.NODE_ENV !== 'test') {
@@ -28,4 +30,36 @@ export async function limpiarBase(app: INestApplication): Promise<void> {
     .query(
       'TRUNCATE TABLE prestamos, movimientos, articulos RESTART IDENTITY CASCADE',
     );
+}
+
+export async function crearArticulo(
+  app: INestApplication,
+  datos: Partial<Articulo> & Pick<Articulo, 'nombre'>,
+): Promise<Articulo> {
+  const repo = app.get(DataSource).getRepository(Articulo);
+  return repo.save(
+    repo.create({
+      categoria: 'General',
+      esRetornable: false,
+      stockActual: 0,
+      stockMinimo: 0,
+      ...datos,
+    }),
+  );
+}
+
+export async function crearPrestamo(
+  app: INestApplication,
+  datos: { articuloId: number } & Partial<Prestamo>,
+): Promise<Prestamo> {
+  const repo = app.get(DataSource).getRepository(Prestamo);
+  return repo.save(
+    repo.create({
+      cantidad: 1,
+      prestadoA: 'Prof. de prueba',
+      fechaDevolucionEsperada: '2099-01-01',
+      estado: EstadoPrestamo.ACTIVO,
+      ...datos,
+    }),
+  );
 }
