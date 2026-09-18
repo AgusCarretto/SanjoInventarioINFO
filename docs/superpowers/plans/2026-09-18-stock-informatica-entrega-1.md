@@ -26,6 +26,16 @@
 
 Todo corre contra el Postgres local real (`localhost:5432`, usuario `postgres`, con la clave que el usuario indicó; vive solo en `backend/.env`, que no se versiona). `InventarioInformatica` ya existía y estaba vacía; `InventarioInformatica_test` se creó para los e2e. Las otras bases del servidor (`Truco-Uruguayo`, `asado-y-acero`, `postgres`) no se tocan. Los e2e solo borran datos si el nombre de la base termina en `_test`.
 
+## Ajustes por las versiones realmente instaladas (Task 1)
+
+El scaffold de `nest new` trajo **Nest 12.0.3 en modo ESM** (`"type": "module"`), **TypeORM 1.1.1**, `@nestjs/typeorm` 12.0.1, TypeScript 6 y **Vitest 4 en lugar de Jest**. Todo el código de este plan se lee con estas reglas, que pisan lo que diga cada bloque de código:
+
+1. **Imports relativos con extensión `.js`** en todo el backend, tests incluidos (`import { X } from './x.js'`, `'../src/app.module.js'`). Vite/Vitest los resuelven a los `.ts`.
+2. **Vitest, no Jest:** `vi.fn()` en vez de `jest.fn()` (los globals están activos). Los e2e corren en serie porque `vitest.config.e2e.ts` tiene `fileParallelism: false` (reemplaza a `--runInBand`; el Step 8 de la Task 1 no aplica: el script `test:e2e` ya existe). Filtros: `npm test -- <texto>` y `npm run test:e2e -- <texto>`.
+3. **Relaciones con `Relation<T>`:** en las entidades, las propiedades de relación se tipan `Relation<Articulo>`, `Relation<Prestamo[]>`, etc., importando `type Relation` de `typeorm`. Es lo que pide TypeORM en proyectos ESM para evitar dependencias circulares entre entidades.
+4. `src/main.ts` usa top-level `await bootstrap()`. El lint del backend es `npm run lint` (oxlint con tipos).
+5. `strict: true` en `tsconfig.json` (con `strictPropertyInitialization: false`, así que las propiedades de entidades no llevan `!`).
+
 ## File Structure
 
 ```text
