@@ -10,13 +10,21 @@ const plural = (n, singular, pluralTexto) => `${n} ${n === 1 ? singular : plural
 function FilaAlerta({ item }) {
   const estilo = NIVELES[item.nivel];
   const porcentaje = porcentajeStock(item.stockActual, item.stockMinimo);
+  const clasificacion = [item.categoria, item.tipo].filter(Boolean).join(', ');
+  const marcaModelo = [item.marca, item.modelo].filter(Boolean).join(' ');
   return (
     <li
       className={`grid gap-x-6 gap-y-3 px-5 py-4 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_8rem] md:items-center ${estilo.fila} ${estilo.borde}`}
     >
       <div className="min-w-0">
         <p className="truncate font-semibold text-marino-900">{item.nombre}</p>
-        <p className="text-sm text-slate-600">{item.categoria}</p>
+        {clasificacion && <p className="text-sm text-slate-600">{clasificacion}</p>}
+        {marcaModelo && <p className="text-sm text-slate-600">{marcaModelo}</p>}
+        {item.compatibilidad && (
+          <p className="text-sm text-slate-600" title={item.compatibilidad}>
+            Compatible con {item.compatibilidad}
+          </p>
+        )}
         {item.esRetornable && (
           <p className="text-sm text-slate-600">
             {plural(item.prestados, 'prestado', 'prestados')} y {plural(item.disponibles, 'disponible', 'disponibles')}

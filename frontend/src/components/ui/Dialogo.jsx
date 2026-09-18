@@ -6,7 +6,10 @@ import { X } from 'lucide-react';
  * Existir en pantalla es estar abierta: quien la usa la monta para abrirla y la
  * desmonta en `alCerrar` para cerrarla.
  */
-export default function Dialogo({ titulo, alCerrar, children }) {
+// Clases completas y literales: Tailwind no detecta nombres armados por concatenación.
+const ANCHOS = { normal: 'max-w-lg', ancho: 'max-w-xl' };
+
+export default function Dialogo({ titulo, alCerrar, ancho = 'normal', children }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -22,7 +25,7 @@ export default function Dialogo({ titulo, alCerrar, children }) {
       ref={ref}
       onClose={alCerrar}
       aria-labelledby="titulo-dialogo"
-      className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-lg border border-slate-200 bg-white p-0 text-marino-900 backdrop:bg-marino-950/60"
+      className={`m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] ${ANCHOS[ancho]} overflow-y-auto rounded-lg border border-slate-200 bg-white p-0 text-marino-900 backdrop:bg-marino-950/60`}
     >
       <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
         <h2 id="titulo-dialogo" className="text-lg font-semibold tracking-tight">

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { CircleCheck, CircleHelp, Pencil, Plus, Trash2 } from 'lucide-react';
 import ConfirmarEliminar from '../components/articulos/ConfirmarEliminar.jsx';
 import FormularioArticulo from '../components/articulos/FormularioArticulo.jsx';
@@ -48,18 +48,24 @@ function EstadoArticulo({ articulo }) {
 function FilaArticulo({ articulo, alEditar, alEliminar }) {
   const estilo = NIVELES[articulo.nivel];
   const retornable = articulo.esRetornable === true;
-  let tipo = <SinDato texto="Sin definir" />;
-  if (articulo.esRetornable !== null) tipo = articulo.esRetornable ? 'Retornable' : 'Consumible';
+  const marcaModelo = [articulo.marca, articulo.modelo].filter(Boolean).join(' ');
+  let uso = <SinDato texto="Sin definir" />;
+  if (articulo.esRetornable !== null) uso = articulo.esRetornable ? 'Retornable' : 'Consumible';
 
   return (
     <tr className={estilo?.fila ?? ''}>
-      <td className={`min-w-40 px-3 py-3 font-medium text-marino-900 ${estilo?.borde ?? 'border-l-4 border-transparent'}`}>
-        {articulo.nombre}
+      <td
+        className={`min-w-44 px-3 py-3 ${estilo?.borde ?? 'border-l-4 border-transparent'}`}
+        title={articulo.compatibilidad ? `Compatible con: ${articulo.compatibilidad}` : undefined}
+      >
+        <p className="font-medium text-marino-900">{articulo.nombre}</p>
+        {marcaModelo && <p className="text-slate-600">{marcaModelo}</p>}
       </td>
-      <td className="whitespace-nowrap px-3 py-3 text-slate-700">
-        {articulo.categoria ?? <SinDato texto="Sin categoría" />}
+      <td className="min-w-36 px-3 py-3 text-slate-700">
+        <p>{articulo.categoria ?? <SinDato texto="Sin categoría" />}</p>
+        {articulo.tipo && <p className="text-slate-600">{articulo.tipo}</p>}
       </td>
-      <td className="whitespace-nowrap px-3 py-3 text-slate-700">{tipo}</td>
+      <td className="whitespace-nowrap px-3 py-3 text-slate-700">{uso}</td>
       <td className={`${COLUMNA_NUMERICA} font-semibold text-marino-900`}>{articulo.stockActual ?? <SinDato />}</td>
       <td className={`${COLUMNA_NUMERICA} text-slate-700`}>{articulo.stockMinimo ?? <SinDato />}</td>
       <td className={`${COLUMNA_NUMERICA} text-slate-700`}>{retornable ? articulo.prestados : <NoAplica />}</td>
@@ -99,11 +105,6 @@ export default function Articulos() {
   const { data, error, loading, reload } = useApi('/articulos');
   const [dialogo, setDialogo] = useState(null);
 
-  const categorias = useMemo(
-    () => [...new Set((data ?? []).map((a) => a.categoria).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es')),
-    [data],
-  );
-
   const cerrarDialogo = () => setDialogo(null);
   const terminar = () => {
     setDialogo(null);
@@ -133,8 +134,8 @@ export default function Articulos() {
           <thead className="bg-slate-50 text-left font-medium text-slate-600">
             <tr>
               <th scope="col" className="border-l-4 border-transparent px-3 py-3">Artículo</th>
-              <th scope="col" className="px-3 py-3">Categoría</th>
-              <th scope="col" className="px-3 py-3">Tipo</th>
+              <th scope="col" className="px-3 py-3">Categoría y tipo</th>
+              <th scope="col" className="px-3 py-3">Uso</th>
               <th scope="col" className="px-3 py-3 text-right">Stock</th>
               <th scope="col" className="px-3 py-3 text-right">Mínimo</th>
               <th scope="col" className="px-3 py-3 text-right">Prestados</th>
@@ -182,7 +183,6 @@ export default function Articulos() {
         <FormularioArticulo
           key={dialogo.articulo?.id ?? 'nuevo'}
           articulo={dialogo.articulo}
-          categorias={categorias}
           alGuardar={terminar}
           alCerrar={cerrarDialogo}
         />

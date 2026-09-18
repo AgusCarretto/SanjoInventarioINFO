@@ -1,10 +1,15 @@
 // El formulario maneja todo como texto (así son los campos); la API espera números,
-// booleanos y null. Estas dos funciones hacen la traducción en ambos sentidos.
+// booleanos y null. Estas funciones hacen la traducción en ambos sentidos.
 
-const TIPOS = { consumible: false, retornable: true };
+const USOS = { consumible: false, retornable: true };
 
 function texto(valor) {
   return valor === null || valor === undefined ? '' : String(valor);
+}
+
+function textoOpcional(valor) {
+  const limpio = valor.trim();
+  return limpio === '' ? null : limpio;
 }
 
 function numeroOpcional(valor) {
@@ -16,13 +21,17 @@ function numeroOpcional(valor) {
 
 /** Valores del formulario para un artículo existente, o vacíos si es uno nuevo. */
 export function valoresIniciales(articulo) {
-  let tipo = '';
-  if (articulo?.esRetornable === true) tipo = 'retornable';
-  if (articulo?.esRetornable === false) tipo = 'consumible';
+  let uso = '';
+  if (articulo?.esRetornable === true) uso = 'retornable';
+  if (articulo?.esRetornable === false) uso = 'consumible';
   return {
     nombre: articulo?.nombre ?? '',
-    categoria: texto(articulo?.categoria),
-    tipo,
+    categoriaId: texto(articulo?.categoriaId),
+    tipoId: texto(articulo?.tipoId),
+    marca: texto(articulo?.marca),
+    modelo: texto(articulo?.modelo),
+    compatibilidad: texto(articulo?.compatibilidad),
+    uso,
     stockActual: texto(articulo?.stockActual),
     stockMinimo: texto(articulo?.stockMinimo),
   };
@@ -30,12 +39,21 @@ export function valoresIniciales(articulo) {
 
 /** Cuerpo para la API: lo que se deja vacío viaja como null (solo el nombre es obligatorio). */
 export function armarPayload(valores) {
-  const categoria = valores.categoria.trim();
   return {
     nombre: valores.nombre.trim(),
-    categoria: categoria === '' ? null : categoria,
-    esRetornable: Object.hasOwn(TIPOS, valores.tipo) ? TIPOS[valores.tipo] : null,
+    categoriaId: numeroOpcional(valores.categoriaId),
+    tipoId: numeroOpcional(valores.tipoId),
+    marca: textoOpcional(valores.marca),
+    modelo: textoOpcional(valores.modelo),
+    compatibilidad: textoOpcional(valores.compatibilidad),
+    esRetornable: Object.hasOwn(USOS, valores.uso) ? USOS[valores.uso] : null,
     stockActual: numeroOpcional(valores.stockActual),
     stockMinimo: numeroOpcional(valores.stockMinimo),
   };
+}
+
+/** Tipos de la categoría elegida (el id llega como texto desde el select). Vacío si no hay. */
+export function tiposDeCategoria(catalogo, categoriaId) {
+  const categoria = catalogo?.categorias?.find((c) => String(c.id) === String(categoriaId));
+  return categoria?.tipos ?? [];
 }

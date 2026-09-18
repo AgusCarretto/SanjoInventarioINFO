@@ -1,17 +1,42 @@
-const COLUMNAS = ['Artículo', 'Categoría', 'Tipo', 'Stock actual', 'Stock mínimo', 'Faltante', 'Nivel'];
+const COLUMNAS = [
+  'Artículo',
+  'Categoría',
+  'Tipo',
+  'Marca',
+  'Modelo',
+  'Compatibilidad',
+  'Uso',
+  'Stock actual',
+  'Stock mínimo',
+  'Faltante',
+  'Nivel',
+];
 const TEXTO_NIVEL = { SIN_STOCK: 'Sin stock', BAJO: 'Stock bajo' };
 
 function celda(valor) {
-  const texto = String(valor);
+  const texto = String(valor ?? '');
   return /[;"\r\n]/.test(texto) ? `"${texto.replaceAll('"', '""')}"` : texto;
 }
 
-/** Separador `;` porque Excel en español (Argentina) lo usa como separador de lista. */
+function textoUso(esRetornable) {
+  if (esRetornable === true) return 'Retornable';
+  if (esRetornable === false) return 'Consumible';
+  return '';
+}
+
+/**
+ * Separador `;` porque Excel en español (Argentina) lo usa como separador de lista.
+ * Lleva tipo, marca, modelo y compatibilidad: es lo que hace falta para comprar el repuesto correcto.
+ */
 export function armarCsvReporteCompra(items) {
   const filas = items.map((i) => [
     i.nombre,
     i.categoria,
-    i.esRetornable ? 'Retornable' : 'Consumible',
+    i.tipo,
+    i.marca,
+    i.modelo,
+    i.compatibilidad,
+    textoUso(i.esRetornable),
     i.stockActual,
     i.stockMinimo,
     i.faltante,

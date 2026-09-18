@@ -16,6 +16,10 @@
 -- "Otros" lleva 99 para que quede siempre al final de cada lista.
 -- =====================================================================
 
+-- Este archivo está guardado en UTF-8. Esta línea se lo avisa a psql aunque tu
+-- terminal de Windows use otra codificación (sin ella, las tildes se guardan rotas).
+SET client_encoding = 'UTF8';
+
 INSERT INTO categorias (nombre, orden) VALUES
   ('Periféricos',    1),
   ('Componentes PC', 2),

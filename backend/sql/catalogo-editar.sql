@@ -16,6 +16,10 @@
 --   * No se puede borrar una categoría o un tipo que tenga artículos.
 --   * Renombrar es seguro: los artículos siguen apuntando al mismo registro.
 --   * La columna "orden" manda: menor va primero. "Otros" usa 99 (siempre al final).
+--
+-- TILDES: si corrés un bloque con psql en Windows y tiene tildes (Periféricos),
+-- ejecutá antes esta línea; sin ella pueden guardarse rotas. En pgAdmin no hace falta.
+--   SET client_encoding = 'UTF8';
 -- =====================================================================
 
 

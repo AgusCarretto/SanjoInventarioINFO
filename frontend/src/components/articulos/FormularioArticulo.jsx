@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { TriangleAlert } from 'lucide-react';
+import { RefreshCw, TriangleAlert } from 'lucide-react';
+import { useApi } from '../../hooks/useApi.js';
 import { apiSend } from '../../lib/api.js';
-import { armarPayload, valoresIniciales } from '../../lib/articuloForm.js';
+import { armarPayload, tiposDeCategoria, valoresIniciales } from '../../lib/articuloForm.js';
 import Dialogo from '../ui/Dialogo.jsx';
 
 const CLASE_CAMPO =
@@ -23,18 +24,34 @@ function Campo({ id, etiqueta, ayuda, children }) {
   );
 }
 
+function Aviso({ children }) {
+  return (
+    <div role="alert" className="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-900">
+      <TriangleAlert className="mt-0.5 size-4 shrink-0 text-red-700" aria-hidden="true" />
+      <div>{children}</div>
+    </div>
+  );
+}
+
 /**
  * Alta (articulo = null) o edición de un artículo. Solo el nombre es obligatorio:
- * lo que se deja vacío se guarda como "sin dato".
+ * lo que se deja vacío se guarda como "sin dato". Las listas de categoría y tipo
+ * salen del catálogo de la base y se leen cada vez que se abre la ventana.
  */
-export default function FormularioArticulo({ articulo, categorias, alGuardar, alCerrar }) {
+export default function FormularioArticulo({ articulo, alGuardar, alCerrar }) {
   const esEdicion = articulo !== null;
+  const catalogo = useApi('/catalogo');
   const [valores, setValores] = useState(() => valoresIniciales(articulo));
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
-  const tipoBloqueado = esEdicion && articulo.prestados > 0;
+  const usoBloqueado = esEdicion && articulo.prestados > 0;
+  const tipos = tiposDeCategoria(catalogo.data, valores.categoriaId);
+  const sinCategoria = valores.categoriaId === '';
 
   const cambiar = (campo) => (evento) => setValores((previos) => ({ ...previos, [campo]: evento.target.value }));
+  // El tipo depende de la categoría: al cambiarla, el tipo elegido deja de valer.
+  const cambiarCategoria = (evento) =>
+    setValores((previos) => ({ ...previos, categoriaId: evento.target.value, tipoId: '' }));
 
   async function enviar(evento) {
     evento.preventDefault();
@@ -56,7 +73,7 @@ export default function FormularioArticulo({ articulo, categorias, alGuardar, al
   }
 
   return (
-    <Dialogo titulo={esEdicion ? 'Editar artículo' : 'Nuevo artículo'} alCerrar={alCerrar}>
+    <Dialogo titulo={esEdicion ? 'Editar artículo' : 'Nuevo artículo'} alCerrar={alCerrar} ancho="ancho">
       <form onSubmit={enviar} noValidate>
         <div className="space-y-4 px-5 py-5">
           <Campo id="articulo-nombre" etiqueta="Nombre (obligatorio)">
@@ -72,43 +89,122 @@ export default function FormularioArticulo({ articulo, categorias, alGuardar, al
             />
           </Campo>
 
-          <Campo id="articulo-categoria" etiqueta="Categoría">
+          {catalogo.error && (
+            <Aviso>
+              <p>No se pudieron cargar las categorías y los tipos. Podés guardar igual y completarlos después.</p>
+              <button
+                type="button"
+                onClick={catalogo.reload}
+                className="mt-1.5 inline-flex items-center gap-1.5 font-medium underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700"
+              >
+                <RefreshCw className="size-3.5" aria-hidden="true" />
+                Reintentar
+              </button>
+            </Aviso>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Campo id="articulo-categoria" etiqueta="Categoría">
+              <select
+                id="articulo-categoria"
+                value={valores.categoriaId}
+                onChange={cambiarCategoria}
+                disabled={catalogo.loading}
+                className={CLASE_CAMPO}
+              >
+                <option value="">{catalogo.loading ? 'Cargando…' : 'Sin categoría'}</option>
+                {(catalogo.data?.categorias ?? []).map((categoria) => (
+                  <option key={categoria.id} value={categoria.id}>
+                    {categoria.nombre}
+                  </option>
+                ))}
+              </select>
+            </Campo>
+
+            <Campo
+              id="articulo-tipo"
+              etiqueta="Tipo"
+              ayuda={sinCategoria && !catalogo.loading ? 'Elegí primero una categoría.' : undefined}
+            >
+              <select
+                id="articulo-tipo"
+                value={valores.tipoId}
+                onChange={cambiar('tipoId')}
+                disabled={sinCategoria || catalogo.loading}
+                aria-describedby={sinCategoria ? 'articulo-tipo-ayuda' : undefined}
+                className={CLASE_CAMPO}
+              >
+                <option value="">Sin tipo</option>
+                {tipos.map((tipo) => (
+                  <option key={tipo.id} value={tipo.id}>
+                    {tipo.nombre}
+                  </option>
+                ))}
+              </select>
+            </Campo>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Campo id="articulo-marca" etiqueta="Marca">
+              <input
+                id="articulo-marca"
+                type="text"
+                value={valores.marca}
+                onChange={cambiar('marca')}
+                maxLength={80}
+                autoComplete="off"
+                className={CLASE_CAMPO}
+              />
+            </Campo>
+            <Campo id="articulo-modelo" etiqueta="Modelo">
+              <input
+                id="articulo-modelo"
+                type="text"
+                value={valores.modelo}
+                onChange={cambiar('modelo')}
+                maxLength={80}
+                autoComplete="off"
+                className={CLASE_CAMPO}
+              />
+            </Campo>
+          </div>
+
+          <Campo
+            id="articulo-compatibilidad"
+            etiqueta="Compatibilidad"
+            ayuda="Con qué equipos o modelos funciona, por ejemplo un tóner o una fuente."
+          >
             <input
-              id="articulo-categoria"
+              id="articulo-compatibilidad"
               type="text"
-              list="categorias-existentes"
-              value={valores.categoria}
-              onChange={cambiar('categoria')}
-              maxLength={60}
+              value={valores.compatibilidad}
+              onChange={cambiar('compatibilidad')}
+              maxLength={255}
               autoComplete="off"
+              aria-describedby="articulo-compatibilidad-ayuda"
               className={CLASE_CAMPO}
             />
-            <datalist id="categorias-existentes">
-              {categorias.map((categoria) => (
-                <option key={categoria} value={categoria} />
-              ))}
-            </datalist>
           </Campo>
 
           <Campo
-            id="articulo-tipo"
-            etiqueta="Tipo"
+            id="articulo-uso"
+            etiqueta="Uso"
             ayuda={
-              tipoBloqueado
+              usoBloqueado
                 ? 'No se puede cambiar: el artículo tiene unidades prestadas.'
                 : 'Los retornables se prestan y se devuelven; los consumibles se gastan.'
             }
           >
             <select
-              id="articulo-tipo"
-              value={valores.tipo}
-              onChange={cambiar('tipo')}
-              disabled={tipoBloqueado}
-              aria-describedby="articulo-tipo-ayuda"
+              id="articulo-uso"
+              value={valores.uso}
+              onChange={cambiar('uso')}
+              disabled={usoBloqueado}
+              aria-describedby="articulo-uso-ayuda"
               className={CLASE_CAMPO}
             >
               <option value="">Sin definir</option>
-              <option value="consumible">Consumible (cables, pilas)</option>
+              <option value="consumible">Consumible (cables, tinta, pilas)</option>
               <option value="retornable">Retornable (proyectores, notebooks)</option>
             </select>
           </Campo>
@@ -148,10 +244,9 @@ export default function FormularioArticulo({ articulo, categorias, alGuardar, al
           </div>
 
           {error && (
-            <div role="alert" className="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-900">
-              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-red-700" aria-hidden="true" />
+            <Aviso>
               <p>{error}</p>
-            </div>
+            </Aviso>
           )}
         </div>
 

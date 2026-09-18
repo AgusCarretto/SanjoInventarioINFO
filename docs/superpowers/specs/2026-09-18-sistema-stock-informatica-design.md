@@ -53,11 +53,27 @@ Puertos: Postgres 5432, backend 3000, frontend 5173. No hay `package.json` en la
 ## 4. Modelo de datos
 
 ```text
+categorias                                   -- catálogo: lista desplegable "Categoría"
+  id              serial PK
+  nombre          varchar(60) UNIQUE NOT NULL
+  orden           int NOT NULL DEFAULT 0     -- menor va primero; "Otros" usa 99
+
+tipos_articulo                               -- catálogo: lista "Tipo", depende de la categoría
+  id              serial PK
+  categoria_id    -> categorias(id) ON DELETE CASCADE, NOT NULL
+  nombre          varchar(80) NOT NULL
+  orden           int NOT NULL DEFAULT 0
+  UNIQUE (categoria_id, nombre)
+
 articulos
   id              serial PK
-  nombre          varchar(120) UNIQUE NOT NULL
-  categoria       varchar(60)  NULL           -- solo el nombre es obligatorio
-  es_retornable   boolean      NULL           -- NULL = tipo sin definir
+  nombre          varchar(120) UNIQUE NOT NULL   -- lo único obligatorio
+  categoria_id    -> categorias(id) ON DELETE RESTRICT, NULL
+  tipo_id         -> tipos_articulo(id) ON DELETE RESTRICT, NULL   -- debe ser de esa categoría
+  marca           varchar(80)  NULL
+  modelo          varchar(80)  NULL
+  compatibilidad  varchar(255) NULL           -- texto libre: con qué equipos o modelos funciona
+  es_retornable   boolean      NULL           -- "Uso": true retornable, false consumible, NULL sin definir
   stock_actual    int NULL     CHECK (>= 0)   -- total del colegio; NULL = sin dato (no es 0)
   stock_minimo    int NULL     CHECK (>= 0)
   created_at, updated_at   timestamptz
@@ -92,7 +108,7 @@ Las restricciones CHECK viven en la base además de la validación de los DTOs.
 
 | # | Regla | Entrega |
 |---|---|---|
-| R1 | `es_retornable` se puede editar (incluso dejarlo sin definir) **mientras el artículo no tenga préstamos ni movimientos**; con historial, cambiarlo → 409. Reenviar el mismo valor no cuenta como cambio. *(Versión original: inmutable tras crear; relajada al agregar el formulario de edición.)* | 1 |
+| R1 | `es_retornable` (el **uso** en la interfaz) se puede editar (incluso dejarlo sin definir) **mientras el artículo no tenga préstamos ni movimientos**; con historial, cambiarlo → 409. Reenviar el mismo valor no cuenta como cambio. *(Versión original: inmutable tras crear; relajada al agregar el formulario de edición.)* | 1 |
 | R2 | `stock_actual` no puede quedar por debajo de los `prestados` del artículo → 409. | 1 |
 | R3 | Un artículo con préstamos o movimientos no se puede eliminar → 409. | 1 |
 | R4 | **Prestar:** solo retornables; `cantidad <= disponibles`; transacción con lock pesimista sobre el artículo; no toca `stock_actual`. | 2 |
@@ -107,11 +123,12 @@ Prefijo `/api`. CORS solo para `http://localhost:5173` y `http://127.0.0.1:5173`
 | Recurso | Endpoints | Entrega |
 |---|---|---|
 | Artículos | `GET /articulos`, `POST /articulos`, `GET /articulos/:id`, `PATCH /articulos/:id`, `DELETE /articulos/:id` | 1 |
+| Catálogo | `GET /catalogo` (categorías con sus tipos, ordenados; se lee de la base en cada pedido) | 1 |
 | Alertas | `GET /alertas/stock` | 1 |
 | Préstamos | `GET /prestamos`, `POST /prestamos`, `PATCH /prestamos/:id/devolver` (estado devuelto: ACTIVO / DEVUELTO / ATRASADO) | 2 |
 | Movimientos | `GET /movimientos?articuloId=`, `POST /movimientos` | 2 |
 
-**Artículos.** `GET /articulos` devuelve cada artículo con `prestados`, `disponibles` y `nivel` (`null` si no está en alerta; `BAJO` o `SIN_STOCK` según la sección 7), ordenado por `categoria` y `nombre`. `CreateArticuloDto`: solo `nombre` es obligatorio (texto no vacío, máx. 120, sin espacios de más, único). `categoria` (máx. 60; un texto vacío pasa a null), `esRetornable` (booleano), `stockActual` y `stockMinimo` (enteros >= 0) son opcionales y aceptan `null`, que significa "sin dato". `disponibles` es `null` si no hay stock actual. `UpdateArticuloDto` es el create parcial: todo se puede editar, con las reglas R1 y R2 (dejar el stock en `null` con unidades prestadas → 409).
+**Artículos.** `GET /articulos` devuelve cada artículo con `prestados`, `disponibles` y `nivel` (`null` si no está en alerta; `BAJO` o `SIN_STOCK` según la sección 7), ordenado por el `orden` de la categoría en el catálogo y después por `nombre` (los que no tienen categoría, al final), e incluye `categoria` y `tipo` (nombres) junto con `categoriaId` y `tipoId`. `CreateArticuloDto`: solo `nombre` es obligatorio (texto no vacío, máx. 120, sin espacios de más, único). `categoriaId` y `tipoId` (deben existir en el catálogo; el tipo debe pertenecer a la categoría y no se puede elegir un tipo sin categoría → 400), `marca` y `modelo` (máx. 80), `compatibilidad` (máx. 255; un texto vacío pasa a null), `esRetornable` (booleano), `stockActual` y `stockMinimo` (enteros >= 0) son opcionales y aceptan `null`, que significa "sin dato". `disponibles` es `null` si no hay stock actual. `UpdateArticuloDto` es el create parcial: todo se puede editar, con las reglas R1 y R2 (dejar el stock en `null` con unidades prestadas → 409).
 
 ## 7. Alertas de stock
 
@@ -128,7 +145,8 @@ Prefijo `/api`. CORS solo para `http://localhost:5173` y `http://127.0.0.1:5173`
   "generadoEn": "2026-09-18T10:00:00Z",
   "resumen": { "total": 5, "sinStock": 1, "bajos": 4 },
   "items": [
-    { "id": 5, "nombre": "Cable de red Cat6", "categoria": "Cables", "esRetornable": false,
+    { "id": 5, "nombre": "Cable de red Cat6", "categoria": "Redes", "tipo": "Cable de red",
+      "marca": null, "modelo": "Cat6", "compatibilidad": null, "esRetornable": false,
       "stockActual": 0, "stockMinimo": 10, "faltante": 10, "nivel": "SIN_STOCK",
       "prestados": 0, "disponibles": 0 }
   ]
@@ -151,8 +169,10 @@ La función pura `clasificarNivel(stockActual, stockMinimo)` devuelve `null`, `'
 ### 8.2 Pantallas de la entrega 1
 
 - **Inicio:** una franja de resumen con 3 indicadores (**Artículos**, **En alerta**, **Sin stock**; en rojo suave cuando son > 0, neutros cuando son 0) y debajo el panel `AlertasStock`, que es el protagonista de la pantalla.
-- **Artículos:** tabla con nombre, categoría, tipo (retornable / consumible), stock total, mínimo, prestados y disponibles. Las filas en alerta llevan la misma marca visual que en el panel. `<th scope="col">` en los encabezados. Lo que está vacío se muestra como "Sin categoría", "Sin definir" o "Sin dato", y el estado de un artículo sin stock o sin mínimo es "Sin dato de stock" (no genera alerta).
-- **Formulario de artículos:** botón "Nuevo artículo" arriba de la tabla y, en cada fila, acciones de editar y eliminar (solo con ícono, con nombre accesible). Alta y edición usan la misma ventana modal (`<dialog>` nativo) con nombre, categoría (con sugerencias de las existentes), tipo (sin definir / consumible / retornable), stock actual y stock mínimo. Los campos vacíos se guardan como `null`; los errores del servidor (nombre repetido, tipo con historial) se muestran dentro de la ventana. El tipo queda bloqueado si el artículo tiene unidades prestadas. Eliminar pide confirmación y el servidor lo frena si hay préstamos o movimientos (R3).
+- **Artículos:** tabla con nombre (y debajo marca y modelo; la compatibilidad se ve al pasar el mouse), categoría (y debajo el tipo), **uso** (retornable / consumible), stock total, mínimo, prestados y disponibles. Las filas en alerta llevan la misma marca visual que en el panel. `<th scope="col">` en los encabezados. Lo que está vacío se muestra como "Sin categoría", "Sin definir" o "Sin dato", y el estado de un artículo sin stock o sin mínimo es "Sin dato de stock" (no genera alerta).
+- **Formulario de artículos:** botón "Nuevo artículo" arriba de la tabla y, en cada fila, acciones de editar y eliminar (solo con ícono, con nombre accesible). Alta y edición usan la misma ventana modal (`<dialog>` nativo) con nombre, **categoría** y **tipo** (listas desplegables leídas de `GET /catalogo` cada vez que se abre la ventana; el tipo depende de la categoría, queda deshabilitado sin categoría y se reinicia al cambiarla), marca, modelo, compatibilidad (texto libre), **uso** (sin definir / consumible / retornable), stock actual y stock mínimo. Los campos vacíos se guardan como `null`; los errores del servidor (nombre repetido, uso con historial) se muestran dentro de la ventana. El uso queda bloqueado si el artículo tiene unidades prestadas. Eliminar pide confirmación y el servidor lo frena si hay préstamos o movimientos (R3).
+- **Alertas y reporte de compra:** cada alerta muestra categoría y tipo, marca y modelo, y la compatibilidad; el CSV suma las columnas Tipo, Marca, Modelo, Compatibilidad y Uso.
+- **Catálogo:** se edita con SQL, no desde la aplicación. `backend/sql/catalogo-inicial.sql` (idempotente, también lo carga `npm run catalogo`) y `backend/sql/catalogo-editar.sql` (recetario de consultas). Ambos archivos declaran `SET client_encoding = 'UTF8'` para que las tildes no se rompan al correrlos con `psql` en Windows.
 
 ### 8.3 Componente `AlertasStock` (`components/dashboard/AlertasStock.jsx`)
 
