@@ -35,6 +35,7 @@ El scaffold de `nest new` trajo **Nest 12.0.3 en modo ESM** (`"type": "module"`)
 3. **Relaciones con `Relation<T>`:** en las entidades, las propiedades de relación se tipan `Relation<Articulo>`, `Relation<Prestamo[]>`, etc., importando `type Relation` de `typeorm`. Es lo que pide TypeORM en proyectos ESM para evitar dependencias circulares entre entidades.
 4. `src/main.ts` usa top-level `await bootstrap()`. El lint del backend es `npm run lint` (oxlint con tipos).
 5. `strict: true` en `tsconfig.json` (con `strictPropertyInitialization: false`, así que las propiedades de entidades no llevan `!`).
+6. **SQLSTATE de la FK (Task 4):** con `ON DELETE RESTRICT` Postgres informa `23001` (restrict_violation), no `23503`. `traducirErrorDeBase` mapea a 409 tanto `23001` como `23503` (más `23505` para UNIQUE). Verificado con una transacción de prueba en psql.
 
 ## File Structure
 
