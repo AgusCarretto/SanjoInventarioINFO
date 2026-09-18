@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@theme {
+  --color-marino-50: #F1F5FA;
+  --color-marino-100: #E0E9F5;
+  --color-marino-200: #BFD1EA;
+  --color-marino-300: #93B3DB;
+  --color-marino-400: #6592C8;
+  --color-marino-500: #3A70B0;
+  --color-marino-600: #26558F;
+  --color-marino-700: #1C4275;
+  --color-marino-800: #15325C;
+  --color-marino-900: #0F2544;
+  --color-marino-950: #0A192F;
+
+  --font-sans: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-marino-900 antialiased;
+  }
+}
