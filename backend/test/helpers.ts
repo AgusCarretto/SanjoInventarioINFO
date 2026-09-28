@@ -49,7 +49,7 @@ export async function loguearAgente(app: INestApplication) {
 export async function limpiarBase(app: INestApplication): Promise<void> {
   const ds = app.get(DataSource);
   await ds.query(
-    'TRUNCATE TABLE prestamos, movimientos, articulos, tipos_articulo, categorias RESTART IDENTITY CASCADE',
+    'TRUNCATE TABLE prestamos, movimientos, articulos, tipos_articulo, categorias, equipos_red, config_red RESTART IDENTITY CASCADE',
   );
   await cargarCatalogoInicial(ds);
 }

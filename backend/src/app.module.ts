@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { CatalogoModule } from './catalogo/catalogo.module.js';
 import { MovimientosModule } from './movimientos/movimientos.module.js';
 import { PrestamosModule } from './prestamos/prestamos.module.js';
+import { RedModule } from './red/red.module.js';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { PrestamosModule } from './prestamos/prestamos.module.js';
     PrestamosModule,
     MovimientosModule,
     AlertasModule,
+    RedModule,
   ],
 })
 export class AppModule {}
