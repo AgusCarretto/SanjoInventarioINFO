@@ -18,6 +18,8 @@ Sistema web interno para que el Departamento de Informática controle el inventa
 | Tailwind | v4, paleta en el CSS con `@theme`. **No** hay `tailwind.config.js`. | Misma convención que `sanjoActivities`. En v4 el archivo JS es solo una vía de compatibilidad (`@config`). |
 | Frontend | React 19 + Vite 8 + React Router 7, JSX plano (sin TypeScript), `lucide-react`, oxlint. | Consistencia con `sanjoActivities`. |
 | Backend | NestJS (TypeScript) + TypeORM + `pg`. | Pedido original. |
+| Nombre repetido | `nombre` deja de ser único por sí solo; la base exige `UNIQUE(nombre, modelo)`. Con `modelo` en null en los dos, tampoco hay conflicto (NULL nunca es igual a NULL en un UNIQUE compuesto). | Pedido del usuario: cargar varios artículos con el mismo nombre (ej. "Tóner") distinguidos por modelo (26A, 85A...), en vez de por un identificador aparte. |
+| Movimiento rápido | Se adelanta un recorte de R6 antes de la entrega 2 completa: `POST /movimientos` ya funciona (ENTRADA/SALIDA, con lock y validación), pero `GET /movimientos` y la pantalla "Movimientos" siguen pendientes. | Pedido del usuario: un acceso rápido desde Inicio para descontar 1 unidad de un consumible ("se usó, se resta uno"), sin esperar a la pantalla completa de movimientos. |
 | Esquema | `synchronize: true` de TypeORM fuera de producción. Sin migraciones por ahora. | Local, datos de ejemplo. Antes de cualquier despliegue real hay que pasar a migraciones. |
 | Idioma | Dominio y textos de UI en español (Argentina). Clases y propiedades en español/camelCase, columnas en snake_case. | Vocabulario del departamento y del pedido original. |
 
@@ -67,7 +69,7 @@ tipos_articulo                               -- catálogo: lista "Tipo", depende
 
 articulos
   id              serial PK
-  nombre          varchar(120) UNIQUE NOT NULL   -- lo único obligatorio
+  nombre          varchar(120) NOT NULL          -- lo único obligatorio
   categoria_id    -> categorias(id) ON DELETE RESTRICT, NULL
   tipo_id         -> tipos_articulo(id) ON DELETE RESTRICT, NULL   -- debe ser de esa categoría
   marca           varchar(80)  NULL
@@ -77,6 +79,7 @@ articulos
   stock_actual    int NULL     CHECK (>= 0)   -- total del colegio; NULL = sin dato (no es 0)
   stock_minimo    int NULL     CHECK (>= 0)
   created_at, updated_at   timestamptz
+  UNIQUE (nombre, modelo)   -- se puede repetir el nombre si cambia el modelo (o si los dos tienen modelo NULL)
 
 prestamos                                    -- solo artículos retornables
   id              serial PK
@@ -88,11 +91,11 @@ prestamos                                    -- solo artículos retornables
   fecha_devolucion_real      timestamptz NULL
   estado          enum(ACTIVO, DEVUELTO) NOT NULL DEFAULT 'ACTIVO'
 
-movimientos                                  -- solo artículos NO retornables
+movimientos                                  -- solo artículos NO retornables, con uso definido
   id              serial PK
   articulo_id     -> articulos(id) ON DELETE RESTRICT, NOT NULL
   tipo            enum(ENTRADA, SALIDA) NOT NULL
-  cantidad        int NOT NULL CHECK (>= 1)
+  cantidad        int NOT NULL CHECK (>= 1)   -- 1 por defecto (acción "Usar 1" de Inicio)
   detalle         varchar(255) NULL          -- "Compra factura 123", "Aula 3B"
   fecha           timestamptz NOT NULL DEFAULT now()
 ```
@@ -113,8 +116,8 @@ Las restricciones CHECK viven en la base además de la validación de los DTOs.
 | R3 | Un artículo con préstamos o movimientos no se puede eliminar → 409. | 1 |
 | R4 | **Prestar:** solo retornables; `cantidad <= disponibles`; transacción con lock pesimista sobre el artículo; no toca `stock_actual`. | 2 |
 | R5 | **Devolver:** ACTIVO → DEVUELTO y guarda `fecha_devolucion_real`; no toca `stock_actual`. Devolver un préstamo ya devuelto → 409. | 2 |
-| R6 | **Movimiento:** solo no retornables; ENTRADA suma y SALIDA resta a `stock_actual` en la misma transacción (con lock); si quedaría negativo → 409. | 2 |
-| R7 | Desde la entrega 2, el stock de un no retornable cambia **solo** por movimientos y `PATCH /articulos/:id` deja de aceptar `stockActual` para ellos. En la entrega 1 el PATCH lo acepta para cualquier artículo (ajuste manual), porque los movimientos todavía no existen. El stock total de un retornable se sigue editando en el artículo (compra o baja de un equipo). | 1 → 2 |
+| R6 | **Movimiento:** solo artículos con uso Consumible (`es_retornable = false`; `null` también se rechaza, pidiendo definir el uso primero); ENTRADA suma y SALIDA resta a `stock_actual` en la misma transacción con lock pesimista; si quedaría negativo → 409. Sin stock cargado (`null`) → 409. `cantidad` por defecto 1 (la acción "Usar 1" de Inicio no manda cantidad). **Implementado de forma adelantada** vía `POST /movimientos`, antes del resto de la entrega 2. | 1 (adelantado) |
+| R7 | Desde la entrega 2, el stock de un no retornable cambia **solo** por movimientos y `PATCH /articulos/:id` deja de aceptar `stockActual` para ellos. Todavía no implementado: el PATCH sigue aceptando `stockActual` para cualquier artículo (ajuste manual), y convive con `POST /movimientos`. El stock total de un retornable se sigue editando en el artículo (compra o baja de un equipo). | 1 → 2 |
 
 ## 6. API
 
@@ -126,7 +129,9 @@ Prefijo `/api`. CORS solo para `http://localhost:5173` y `http://127.0.0.1:5173`
 | Catálogo | `GET /catalogo` (categorías con sus tipos, ordenados; se lee de la base en cada pedido) | 1 |
 | Alertas | `GET /alertas/stock` | 1 |
 | Préstamos | `GET /prestamos`, `POST /prestamos`, `PATCH /prestamos/:id/devolver` (estado devuelto: ACTIVO / DEVUELTO / ATRASADO) | 2 |
-| Movimientos | `GET /movimientos?articuloId=`, `POST /movimientos` | 2 |
+| Movimientos | `POST /movimientos` (implementado, R6). `GET /movimientos?articuloId=` pendiente. | 1 (parcial) / 2 |
+
+**Movimientos.** `CreateMovimientoDto`: `articuloId` (obligatorio), `tipo` (`ENTRADA` \| `SALIDA`, obligatorio), `cantidad` (opcional, entero ≥ 1, por defecto 1), `detalle` (opcional, texto). Devuelve el artículo actualizado (misma forma que `GET /articulos/:id`), para que la pantalla que llamó refresque stock y nivel sin pedirlo aparte.
 
 **Artículos.** `GET /articulos` devuelve cada artículo con `prestados`, `disponibles` y `nivel` (`null` si no está en alerta; `BAJO` o `SIN_STOCK` según la sección 7), ordenado por el `orden` de la categoría en el catálogo y después por `nombre` (los que no tienen categoría, al final), e incluye `categoria` y `tipo` (nombres) junto con `categoriaId` y `tipoId`. `CreateArticuloDto`: solo `nombre` es obligatorio (texto no vacío, máx. 120, sin espacios de más, único). `categoriaId` y `tipoId` (deben existir en el catálogo; el tipo debe pertenecer a la categoría y no se puede elegir un tipo sin categoría → 400), `marca` y `modelo` (máx. 80), `compatibilidad` (máx. 255; un texto vacío pasa a null), `esRetornable` (booleano), `stockActual` y `stockMinimo` (enteros >= 0) son opcionales y aceptan `null`, que significa "sin dato". `disponibles` es `null` si no hay stock actual. `UpdateArticuloDto` es el create parcial: todo se puede editar, con las reglas R1 y R2 (dejar el stock en `null` con unidades prestadas → 409).
 
@@ -168,9 +173,10 @@ La función pura `clasificarNivel(stockActual, stockMinimo)` devuelve `null`, `'
 
 ### 8.2 Pantallas de la entrega 1
 
-- **Inicio:** una franja de resumen con 3 indicadores (**Artículos**, **En alerta**, **Sin stock**; en rojo suave cuando son > 0, neutros cuando son 0) y debajo el panel `AlertasStock`, que es el protagonista de la pantalla.
+- **Inicio:** una franja de resumen con 3 indicadores (**Artículos**, **En alerta**, **Sin stock**; en rojo suave cuando son > 0, neutros cuando son 0), debajo el cartel clickable "Registrar uso de stock" (`components/dashboard/UsarStockCard.jsx`) y después el panel `AlertasStock`, que es el protagonista de la pantalla.
+- **Registrar uso de stock (`components/articulos/UsarArticuloModal.jsx`):** el cartel abre una ventana modal con un buscador (filtra por nombre, modelo o compatibilidad, sin distinguir mayúsculas) y una lista de artículos con nombre, categoría/tipo, marca/modelo, stock actual y su insignia de nivel si está en alerta. Cada fila trae un botón **"Usar 1"** que llama a `POST /movimientos` (`tipo: SALIDA`) si el artículo es elegible (uso Consumible, stock cargado y mayor a 0); si no lo es, en vez del botón se explica el motivo (`lib/usarArticulo.js: elegibilidadParaUsar`, la misma regla que valida el servidor, para no ofrecer una acción que va a fallar). Al usar una unidad la lista se refresca sola, sin cerrar la ventana, para poder seguir procesando varios artículos seguidos; al cerrarla, Inicio vuelve a pedir `/articulos` y `/alertas/stock`.
 - **Artículos:** tabla con nombre (y debajo marca y modelo; la compatibilidad se ve al pasar el mouse), categoría (y debajo el tipo), **uso** (retornable / consumible), stock total, mínimo, prestados y disponibles. Las filas en alerta llevan la misma marca visual que en el panel. `<th scope="col">` en los encabezados. Lo que está vacío se muestra como "Sin categoría", "Sin definir" o "Sin dato", y el estado de un artículo sin stock o sin mínimo es "Sin dato de stock" (no genera alerta).
-- **Formulario de artículos:** botón "Nuevo artículo" arriba de la tabla y, en cada fila, acciones de editar y eliminar (solo con ícono, con nombre accesible). Alta y edición usan la misma ventana modal (`<dialog>` nativo) con nombre, **categoría** y **tipo** (listas desplegables leídas de `GET /catalogo` cada vez que se abre la ventana; el tipo depende de la categoría, queda deshabilitado sin categoría y se reinicia al cambiarla), marca, modelo, compatibilidad (texto libre), **uso** (sin definir / consumible / retornable), stock actual y stock mínimo. Los campos vacíos se guardan como `null`; los errores del servidor (nombre repetido, uso con historial) se muestran dentro de la ventana. El uso queda bloqueado si el artículo tiene unidades prestadas. Eliminar pide confirmación y el servidor lo frena si hay préstamos o movimientos (R3).
+- **Formulario de artículos:** botón "Nuevo artículo" arriba de la tabla y, en cada fila, acciones de editar y eliminar (solo con ícono, con nombre accesible). Alta y edición usan la misma ventana modal (`<dialog>` nativo) con nombre, **categoría** y **tipo** (listas desplegables leídas de `GET /catalogo` cada vez que se abre la ventana; el tipo depende de la categoría, queda deshabilitado sin categoría y se reinicia al cambiarla), marca, modelo, compatibilidad (texto libre), **uso** (sin definir / consumible / retornable), stock actual y stock mínimo. Los campos vacíos se guardan como `null`; los errores del servidor (nombre y modelo repetidos, uso con historial) se muestran dentro de la ventana (`components/ui/Aviso.jsx`, compartido con el modal de eliminar y el de registrar uso). El uso queda bloqueado si el artículo tiene unidades prestadas. Eliminar pide confirmación y el servidor lo frena si hay préstamos o movimientos (R3).
 - **Alertas y reporte de compra:** cada alerta muestra categoría y tipo, marca y modelo, y la compatibilidad; el CSV suma las columnas Tipo, Marca, Modelo, Compatibilidad y Uso.
 - **Catálogo:** se edita con SQL, no desde la aplicación. `backend/sql/catalogo-inicial.sql` (idempotente, también lo carga `npm run catalogo`) y `backend/sql/catalogo-editar.sql` (recetario de consultas). Ambos archivos declaran `SET client_encoding = 'UTF8'` para que las tildes no se rompan al correrlos con `psql` en Windows.
 
@@ -244,7 +250,7 @@ La función pura `clasificarNivel(stockActual, stockMinimo)` devuelve `null`, `'
 
 **Entrega 1 (este spec):** proyecto Nest conectado al Postgres local; las 3 entidades; CRUD de Artículos; `GET /alertas/stock`; seed; frontend con layout, Inicio + Alertas, y Artículos; `readme.md` actualizado (sin Docker, nombre real de la carpeta, pasos de puesta en marcha).
 
-**Entrega 2 (spec y plan propios):** endpoints y pantallas de Préstamos y Movimientos con las reglas R4–R7.
+**Entrega 2 (spec y plan propios):** endpoints y pantallas de Préstamos y Movimientos con las reglas R4–R7. `POST /movimientos` (R6) ya está hecho, adelantado para la acción "Usar 1" de Inicio; falta `GET /movimientos`, la pantalla de historial y R7.
 
 **Criterios de aceptación de la entrega 1:**
 1. `npm run start:dev` conecta con el Postgres local y crea las 3 tablas.
@@ -253,7 +259,7 @@ La función pura `clasificarNivel(stockActual, stockMinimo)` devuelve `null`, `'
 4. En `http://localhost:5173` Inicio muestra KPIs 10 / 5 / 1 y el panel con las 5 alertas marcadas; Artículos muestra la tabla con `prestados` y `disponibles`; el CSV descargado abre en Excel con columnas y acentos correctos.
 5. Tests unitarios y e2e pasan.
 
-**Fuera de alcance (por ahora):** autenticación y roles (corre local, en la PC del departamento), tabla de personas y de categorías, migraciones, Docker, despliegue, notificaciones por mail.
+**Fuera de alcance (por ahora):** autenticación y roles (corre local, en la PC del departamento), tabla de personas, migraciones, Docker, despliegue, notificaciones por mail.
 
 ## 12. Comandos de inicialización
 
