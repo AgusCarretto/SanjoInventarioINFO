@@ -192,7 +192,10 @@ export class ArticulosService {
     const codigo = (error as { driverError?: { code?: string } })?.driverError
       ?.code;
     if (codigo === '23505') {
-      return new ConflictException('Ya existe un artículo con ese nombre');
+      // Único constraint UNIQUE que queda en la tabla: (nombre, modelo).
+      return new ConflictException(
+        'Ya existe un artículo con ese nombre y ese modelo',
+      );
     }
     if (codigo === '23001' || codigo === '23503') {
       return new ConflictException(

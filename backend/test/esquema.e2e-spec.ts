@@ -104,10 +104,20 @@ describe('Esquema de base de datos', () => {
     ).rejects.toThrow();
   });
 
-  it('impide repetir el nombre de un artículo (UNIQUE)', async () => {
+  it('impide repetir nombre y modelo juntos (UNIQUE), pero permite repetir el nombre solo', async () => {
     const repo = ds.getRepository(Articulo);
-    const datos = { nombre: 'Cable', esRetornable: false };
-    await repo.insert(datos);
-    await expect(repo.insert(datos)).rejects.toThrow();
+    await repo.insert({ nombre: 'Tóner', modelo: '26A', esRetornable: false });
+    await expect(
+      repo.insert({ nombre: 'Tóner', modelo: '26A', esRetornable: false }),
+    ).rejects.toThrow();
+    // Mismo nombre, modelo distinto: para distinguir "muchos tóners".
+    await expect(
+      repo.insert({ nombre: 'Tóner', modelo: '85A', esRetornable: false }),
+    ).resolves.toBeDefined();
+    // Mismo nombre, sin modelo en ninguno de los dos: NULL nunca es igual a NULL.
+    await repo.insert({ nombre: 'Cable', esRetornable: false });
+    await expect(
+      repo.insert({ nombre: 'Cable', esRetornable: false }),
+    ).resolves.toBeDefined();
   });
 });

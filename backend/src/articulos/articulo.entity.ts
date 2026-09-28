@@ -8,6 +8,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
   type Relation,
+  Unique,
   UpdateDateColumn,
 } from 'typeorm';
 import { Categoria } from '../catalogo/categoria.entity.js';
@@ -15,14 +16,19 @@ import { TipoArticulo } from '../catalogo/tipo-articulo.entity.js';
 import { Movimiento } from '../movimientos/movimiento.entity.js';
 import { Prestamo } from '../prestamos/prestamo.entity.js';
 
+// El nombre solo tiene que ser único junto con el modelo: permite cargar
+// "Tóner" varias veces con modelos distintos (26A, 85A...). Con `modelo` en
+// null, Postgres no considera dos NULL iguales, así que también se puede
+// repetir el nombre sin definir el modelo todavía.
 @Entity('articulos')
+@Unique(['nombre', 'modelo'])
 @Check('"stock_actual" >= 0')
 @Check('"stock_minimo" >= 0')
 export class Articulo {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'varchar', length: 120, unique: true })
+  @Column({ type: 'varchar', length: 120 })
   nombre: string;
 
   // Solo el nombre es obligatorio. Un null significa "sin dato", no cero.

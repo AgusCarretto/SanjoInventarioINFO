@@ -262,9 +262,21 @@ describe('Artículos (e2e)', () => {
       await post({ nombre: 'A', tipoId }).expect(400);
     });
 
-    it('responde 409 si el nombre ya existe', async () => {
+    it('responde 409 si ya existe un artículo con el mismo nombre y modelo', async () => {
+      await crearArticulo(app, { nombre: 'Tóner', modelo: '26A' });
+      const { body } = await post({ nombre: 'Tóner', modelo: '26A' }).expect(409);
+      expect(body.message).toContain('nombre');
+      expect(body.message).toContain('modelo');
+    });
+
+    it('permite repetir el nombre si el modelo es distinto (muchos tóners)', async () => {
+      await crearArticulo(app, { nombre: 'Tóner', modelo: '26A' });
+      await post({ nombre: 'Tóner', modelo: '85A' }).expect(201);
+    });
+
+    it('permite repetir el nombre sin modelo en ninguno de los dos', async () => {
       await crearArticulo(app, { nombre: 'Cable' });
-      await post({ nombre: 'Cable' }).expect(409);
+      await post({ nombre: 'Cable' }).expect(201);
     });
   });
 
@@ -424,10 +436,16 @@ describe('Artículos (e2e)', () => {
       await patch(9999, { stockActual: 1 }).expect(404);
     });
 
-    it('responde 409 si el nuevo nombre ya existe', async () => {
-      await crearArticulo(app, { nombre: 'Cable' });
-      const b = await crearArticulo(app, { nombre: 'Pilas' });
-      await patch(b.id, { nombre: 'Cable' }).expect(409);
+    it('responde 409 si el nuevo nombre+modelo ya existe en otro artículo', async () => {
+      await crearArticulo(app, { nombre: 'Tóner', modelo: '26A' });
+      const b = await crearArticulo(app, { nombre: 'Tóner', modelo: '85A' });
+      await patch(b.id, { modelo: '26A' }).expect(409);
+    });
+
+    it('permite cambiar el modelo para distinguir dos artículos con el mismo nombre', async () => {
+      await crearArticulo(app, { nombre: 'Tóner', modelo: '26A' });
+      const b = await crearArticulo(app, { nombre: 'Tóner', modelo: 'sin definir' });
+      await patch(b.id, { modelo: '85A' }).expect(200);
     });
   });
 
