@@ -5,6 +5,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AlertasModule } from './alertas/alertas.module.js';
 import { ArticulosModule } from './articulos/articulos.module.js';
+import { AuthModule } from './auth/auth.module.js';
 import { CatalogoModule } from './catalogo/catalogo.module.js';
 import { MovimientosModule } from './movimientos/movimientos.module.js';
 import { PrestamosModule } from './prestamos/prestamos.module.js';
@@ -38,6 +39,7 @@ import { PrestamosModule } from './prestamos/prestamos.module.js';
         synchronize: config.get<string>('NODE_ENV') !== 'production',
       }),
     }),
+    AuthModule,
     CatalogoModule,
     ArticulosModule,
     PrestamosModule,
