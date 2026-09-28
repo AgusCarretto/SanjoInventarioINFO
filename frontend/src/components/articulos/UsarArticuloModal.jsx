@@ -9,11 +9,12 @@ import Dialogo from '../ui/Dialogo.jsx';
 import ErrorConexion from '../ui/ErrorConexion.jsx';
 import NivelBadge from '../ui/NivelBadge.jsx';
 
-function FilaArticuloUsar({ articulo, procesando, error, alUsar }) {
+function FilaArticuloUsar({ articulo, procesando, error, detalleAbierto, alAbrirDetalle, alUsar }) {
   const estilo = NIVELES[articulo.nivel];
   const clasificacion = [articulo.categoria, articulo.tipo].filter(Boolean).join(', ');
   const marcaModelo = [articulo.marca, articulo.modelo].filter(Boolean).join(' ');
   const elegibilidad = elegibilidadParaUsar(articulo);
+  const [detalle, setDetalle] = useState('');
 
   return (
     <li className={`px-5 py-4 ${estilo?.fila ?? ''} ${estilo?.borde ?? 'border-l-4 border-transparent'}`}>
@@ -32,19 +33,50 @@ function FilaArticuloUsar({ articulo, procesando, error, alUsar }) {
             {articulo.nivel && <NivelBadge nivel={articulo.nivel} />}
           </div>
           {elegibilidad.puede ? (
-            <button
-              type="button"
-              onClick={() => alUsar(articulo.id)}
-              disabled={procesando}
-              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-marino-950 px-3 py-2 text-sm font-medium text-white hover:bg-marino-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marino-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-400"
-            >
-              {procesando ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <PackageMinus className="size-4" aria-hidden="true" />
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => alUsar(articulo.id, null)}
+                  disabled={procesando}
+                  className="inline-flex items-center gap-2 rounded-lg bg-marino-950 px-3 py-2 text-sm font-medium text-white hover:bg-marino-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marino-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-400"
+                >
+                  {procesando ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <PackageMinus className="size-4" aria-hidden="true" />
+                  )}
+                  Usar 1
+                </button>
+                <button
+                  type="button"
+                  onClick={() => alAbrirDetalle(detalleAbierto ? null : articulo.id)}
+                  className="text-xs font-medium text-marino-700 underline-offset-2 hover:underline"
+                >
+                  {detalleAbierto ? 'Cancelar' : '+ Detalle'}
+                </button>
+              </div>
+              {detalleAbierto && (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={detalle}
+                    onChange={(evento) => setDetalle(evento.target.value)}
+                    placeholder="Ej: impresora de Secretaría"
+                    autoFocus
+                    className="w-48 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-marino-900 placeholder:text-slate-400 focus-visible:border-marino-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marino-600/30"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => alUsar(articulo.id, detalle)}
+                    disabled={procesando}
+                    className="rounded-lg border border-marino-600 px-2.5 py-1.5 text-sm font-medium text-marino-800 hover:bg-marino-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Usar con detalle
+                  </button>
+                </div>
               )}
-              Usar 1
-            </button>
+            </div>
           ) : (
             <p className="max-w-40 shrink-0 text-right text-sm text-slate-500">{elegibilidad.motivo}</p>
           )}
@@ -69,17 +101,19 @@ export default function UsarArticuloModal({ alCerrar }) {
   const [filtro, setFiltro] = useState('');
   const [enCurso, setEnCurso] = useState(() => new Set());
   const [erroresPorFila, setErroresPorFila] = useState({});
+  const [detalleAbiertoPara, setDetalleAbiertoPara] = useState(null);
 
   const filtrados = filtrarArticulos(data ?? [], filtro);
 
-  async function usar(articuloId) {
+  async function usar(articuloId, detalle) {
     setEnCurso((previos) => new Set(previos).add(articuloId));
     setErroresPorFila((previos) => {
       const { [articuloId]: _omitido, ...resto } = previos;
       return resto;
     });
     try {
-      await apiSend('POST', '/movimientos', { articuloId, tipo: 'SALIDA' });
+      await apiSend('POST', '/movimientos', { articuloId, tipo: 'SALIDA', detalle: detalle || null });
+      setDetalleAbiertoPara(null);
       reload();
     } catch (fallo) {
       setErroresPorFila((previos) => ({ ...previos, [articuloId]: fallo.message }));
@@ -116,6 +150,8 @@ export default function UsarArticuloModal({ alCerrar }) {
             articulo={articulo}
             procesando={enCurso.has(articulo.id)}
             error={erroresPorFila[articulo.id]}
+            detalleAbierto={detalleAbiertoPara === articulo.id}
+            alAbrirDetalle={setDetalleAbiertoPara}
             alUsar={usar}
           />
         ))}

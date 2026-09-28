@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import DashboardLayout from './components/layout/DashboardLayout.jsx';
 import Articulos from './pages/Articulos.jsx';
 import Inicio from './pages/Inicio.jsx';
+import Movimientos from './pages/Movimientos.jsx';
 import Proximamente from './pages/Proximamente.jsx';
 
 export default function App() {
@@ -14,10 +15,7 @@ export default function App() {
           path="prestamos"
           element={<Proximamente titulo="Préstamos" descripcion="Registro de equipos prestados y devoluciones." />}
         />
-        <Route
-          path="movimientos"
-          element={<Proximamente titulo="Movimientos" descripcion="Historial de ingresos y consumo de insumos." />}
-        />
+        <Route path="movimientos" element={<Movimientos />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
