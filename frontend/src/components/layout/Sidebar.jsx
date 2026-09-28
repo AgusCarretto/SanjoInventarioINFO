@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { ArrowLeftRight, HandHelping, LayoutDashboard, LogOut, Menu, Package, X } from 'lucide-react';
+import { ArrowLeftRight, HandHelping, LayoutDashboard, LogOut, Menu, Network, Package, X } from 'lucide-react';
 import { apiSend } from '../../lib/api.js';
 
 const ITEMS = [
@@ -8,6 +8,7 @@ const ITEMS = [
   { to: '/articulos', etiqueta: 'Artículos', Icono: Package },
   { to: '/prestamos', etiqueta: 'Préstamos', Icono: HandHelping },
   { to: '/movimientos', etiqueta: 'Movimientos', Icono: ArrowLeftRight },
+  { to: '/red', etiqueta: 'Red', Icono: Network },
 ];
 
 const claseItem = ({ isActive }) =>

@@ -7,6 +7,7 @@ import Inicio from './pages/Inicio.jsx';
 import Login from './pages/Login.jsx';
 import Movimientos from './pages/Movimientos.jsx';
 import Prestamos from './pages/Prestamos.jsx';
+import Red from './pages/Red.jsx';
 
 /** Antes que nada, ¿hay una sesión iniciada? Sin eso no se pide ni se muestra nada más. */
 export default function App() {
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="articulos" element={<Articulos />} />
         <Route path="prestamos" element={<Prestamos />} />
         <Route path="movimientos" element={<Movimientos />} />
+        <Route path="red" element={<Red />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
