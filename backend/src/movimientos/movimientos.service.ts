@@ -20,6 +20,27 @@ export class MovimientosService {
     private readonly dataSource: DataSource,
   ) {}
 
+  /** Historial completo, más reciente primero, con el artículo ya incluido. */
+  async listar() {
+    const filas = await this.movimientos.find({
+      relations: { articulo: true },
+      order: { fecha: 'DESC', id: 'DESC' },
+    });
+    return filas.map((m) => ({
+      id: m.id,
+      fecha: m.fecha,
+      tipo: m.tipo,
+      cantidad: m.cantidad,
+      detalle: m.detalle,
+      articulo: {
+        id: m.articulo.id,
+        nombre: m.articulo.nombre,
+        marca: m.articulo.marca,
+        modelo: m.articulo.modelo,
+      },
+    }));
+  }
+
   async crear(dto: CreateMovimientoDto): Promise<ArticuloConDisponibilidad> {
     const cantidad = dto.cantidad ?? 1;
 

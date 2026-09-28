@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { Movimiento } from '../src/movimientos/movimiento.entity.js';
-import { crearApp, crearArticulo, limpiarBase } from './helpers.js';
+import { crearApp, crearArticulo, crearMovimiento, limpiarBase } from './helpers.js';
 
 describe('Movimientos (e2e)', () => {
   let app: INestApplication;
@@ -112,6 +112,36 @@ describe('Movimientos (e2e)', () => {
       }).expect(201);
       expect(body.stockActual).toBe(7);
       expect(await movimientosDe(a.id)).toHaveLength(1);
+    });
+  });
+
+  describe('GET /api/movimientos (historial)', () => {
+    it('devuelve vacío sin movimientos', async () => {
+      const { body } = await request(app.getHttpServer())
+        .get('/api/movimientos')
+        .expect(200);
+      expect(body).toEqual([]);
+    });
+
+    it('devuelve más reciente primero, con el artículo y el detalle', async () => {
+      const a = await crearArticulo(app, { nombre: 'Tóner', modelo: '26A' });
+      const primero = await crearMovimiento(app, {
+        articuloId: a.id,
+        fecha: new Date('2026-01-01'),
+      });
+      const segundo = await crearMovimiento(app, {
+        articuloId: a.id,
+        detalle: 'Impresora de Secretaría',
+        fecha: new Date('2026-02-01'),
+      });
+      const { body } = await request(app.getHttpServer())
+        .get('/api/movimientos')
+        .expect(200);
+      expect(body.map((m: { id: number }) => m.id)).toEqual([segundo.id, primero.id]);
+      expect(body[0]).toMatchObject({
+        detalle: 'Impresora de Secretaría',
+        articulo: { nombre: 'Tóner', modelo: '26A' },
+      });
     });
   });
 
