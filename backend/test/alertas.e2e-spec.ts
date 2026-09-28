@@ -50,19 +50,7 @@ describe('GET /api/alertas/stock (e2e)', () => {
     expect(body.items[1]).toMatchObject({ faltante: 2, nivel: 'BAJO' });
   });
 
-  it('un préstamo no dispara alerta: se compara el total, no lo disponible', async () => {
-    const a = await crearArticulo(app, {
-      nombre: 'Proyector',
-      esRetornable: true,
-      stockActual: 3,
-      stockMinimo: 1,
-    });
-    await crearPrestamo(app, { articuloId: a.id, cantidad: 2 }); // disponibles = 1
-    const { body } = await pedir();
-    expect(body.items).toEqual([]);
-  });
-
-  it('un retornable en alerta trae prestados y disponibles', async () => {
+  it('en un retornable, stock_actual ya es lo disponible: un préstamo puede disparar alerta', async () => {
     const a = await crearArticulo(app, {
       nombre: 'Parlante',
       esRetornable: true,
@@ -73,7 +61,6 @@ describe('GET /api/alertas/stock (e2e)', () => {
     const { body } = await pedir();
     expect(body.items[0]).toMatchObject({
       prestados: 1,
-      disponibles: 0,
       faltante: 0,
       nivel: 'BAJO',
     });

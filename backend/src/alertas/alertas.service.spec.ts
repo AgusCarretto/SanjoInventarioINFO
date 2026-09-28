@@ -25,7 +25,6 @@ function art(
     stockActual,
     stockMinimo,
     prestados: 0,
-    disponibles: stockActual,
     nivel: clasificarNivel(stockActual, stockMinimo),
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -76,19 +75,11 @@ describe('AlertasService', () => {
     expect(r.resumen).toEqual({ total: 2, sinStock: 1, bajos: 1 });
   });
 
-  it('incluye prestados y disponibles de los retornables', async () => {
+  it('incluye prestados de los retornables', async () => {
     const r = await servicioCon([
-      art(1, 'Parlante', 1, 1, {
-        esRetornable: true,
-        prestados: 1,
-        disponibles: 0,
-      }),
+      art(1, 'Parlante', 1, 1, { esRetornable: true, prestados: 1 }),
     ]).obtenerAlertasDeStock();
-    expect(r.items[0]).toMatchObject({
-      esRetornable: true,
-      prestados: 1,
-      disponibles: 0,
-    });
+    expect(r.items[0]).toMatchObject({ esRetornable: true, prestados: 1 });
   });
 
   it('copia categoría, tipo, marca, modelo, compatibilidad y a quién le sirve de cada artículo', async () => {
@@ -114,11 +105,7 @@ describe('AlertasService', () => {
 
   it('ignora los artículos sin stock actual o sin mínimo cargado', async () => {
     const r = await servicioCon([
-      art(1, 'Sin stock cargado', 0, 5, {
-        stockActual: null,
-        disponibles: null,
-        nivel: null,
-      }),
+      art(1, 'Sin stock cargado', 0, 5, { stockActual: null, nivel: null }),
       art(2, 'Sin mínimo', 0, 5, { stockMinimo: null, nivel: null }),
       art(3, 'Bajo', 3, 5),
     ]).obtenerAlertasDeStock();

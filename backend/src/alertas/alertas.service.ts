@@ -36,7 +36,6 @@ export class AlertasService {
               faltante: a.stockMinimo - a.stockActual,
               nivel: a.nivel,
               prestados: a.prestados,
-              disponibles: a.stockActual - a.prestados,
             },
           ],
     );

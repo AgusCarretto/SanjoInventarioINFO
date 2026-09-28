@@ -30,7 +30,7 @@ describe('Artículos (e2e)', () => {
     request(app.getHttpServer()).patch(`/api/articulos/${id}`).send(cuerpo);
 
   describe('GET /api/articulos', () => {
-    it('devuelve prestados, disponibles y nivel, ordenados por categoría del catálogo y nombre', async () => {
+    it('devuelve prestados y nivel, ordenados por categoría del catálogo y nombre', async () => {
       const proyector = await crearArticulo(app, {
         nombre: 'Proyector',
         categoriaId: await idCategoria(app, 'Otros'),
@@ -78,7 +78,6 @@ describe('Artículos (e2e)', () => {
       ]);
       expect(body[3]).toMatchObject({
         prestados: 1,
-        disponibles: 3,
         stockActual: 4,
         nivel: null,
         categoria: 'Otros',
@@ -86,7 +85,6 @@ describe('Artículos (e2e)', () => {
       });
       expect(body[0]).toMatchObject({
         prestados: 0,
-        disponibles: 3,
         nivel: 'BAJO',
         categoria: 'Periféricos',
         tipo: null,
@@ -119,7 +117,6 @@ describe('Artículos (e2e)', () => {
       expect(body).toMatchObject({
         id: a.id,
         prestados: 1,
-        disponibles: 0,
         nivel: 'BAJO',
         categoria: 'Periféricos',
         categoriaId,
@@ -171,7 +168,6 @@ describe('Artículos (e2e)', () => {
         stockActual: 2,
         stockMinimo: 5,
         prestados: 0,
-        disponibles: 2,
         nivel: 'BAJO',
       });
     });
@@ -192,7 +188,6 @@ describe('Artículos (e2e)', () => {
         stockActual: null,
         stockMinimo: null,
         prestados: 0,
-        disponibles: null,
         nivel: null,
       });
     });
@@ -349,7 +344,6 @@ describe('Artículos (e2e)', () => {
         esRetornable: null,
         stockActual: null,
         stockMinimo: null,
-        disponibles: null,
         nivel: null,
       });
     });
@@ -424,28 +418,6 @@ describe('Artículos (e2e)', () => {
       });
       await crearPrestamo(app, { articuloId: a.id });
       await patch(a.id, { esRetornable: true, marca: 'Epson' }).expect(200);
-    });
-
-    it('R2: rechaza dejar el stock por debajo de lo prestado y acepta igualarlo', async () => {
-      const a = await crearArticulo(app, {
-        nombre: 'Proyector',
-        esRetornable: true,
-        stockActual: 4,
-        stockMinimo: 1,
-      });
-      await crearPrestamo(app, { articuloId: a.id, cantidad: 3 });
-      await patch(a.id, { stockActual: 2 }).expect(409);
-      await patch(a.id, { stockActual: 3 }).expect(200);
-    });
-
-    it('R2: no deja el stock sin dato (null) si hay unidades prestadas', async () => {
-      const a = await crearArticulo(app, {
-        nombre: 'Proyector',
-        esRetornable: true,
-        stockActual: 4,
-      });
-      await crearPrestamo(app, { articuloId: a.id, cantidad: 1 });
-      await patch(a.id, { stockActual: null }).expect(409);
     });
 
     it('responde 404 si no existe', async () => {

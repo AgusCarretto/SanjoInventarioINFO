@@ -16,7 +16,6 @@ export interface AlertaStockItem {
   faltante: number;
   nivel: NivelAlerta;
   prestados: number;
-  disponibles: number;
 }
 
 export interface AlertasStockRespuesta {

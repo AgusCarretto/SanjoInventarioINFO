@@ -32,13 +32,13 @@ describe('Seed de datos de ejemplo (e2e)', () => {
     const { body } = await request(app.getHttpServer())
       .get('/api/alertas/stock')
       .expect(200);
-    expect(body.resumen).toEqual({ total: 5, sinStock: 1, bajos: 4 });
+    expect(body.resumen).toEqual({ total: 5, sinStock: 2, bajos: 3 });
     expect(body.items.map((i: { nombre: string }) => i.nombre)).toEqual([
       'Cable de red Cat6',
+      'Parlante portátil',
       'Cable HDMI 2 m',
       'Pilas AAA',
       'Teclado USB',
-      'Parlante portátil',
     ]);
   });
 
@@ -67,7 +67,7 @@ describe('Seed de datos de ejemplo (e2e)', () => {
     ).toBe(true);
   });
 
-  it('deja 1 unidad prestada del proyector y del parlante', async () => {
+  it('deja 1 unidad prestada del proyector y del parlante, ya restada del stock disponible', async () => {
     await cargarDatosEjemplo(app.get(DataSource));
     const { body } = await request(app.getHttpServer())
       .get('/api/articulos')
@@ -76,11 +76,11 @@ describe('Seed de datos de ejemplo (e2e)', () => {
       body.find((a: { nombre: string }) => a.nombre === nombre);
     expect(por('Proyector Epson EB-X06')).toMatchObject({
       prestados: 1,
-      disponibles: 3,
+      stockActual: 3,
     });
     expect(por('Parlante portátil')).toMatchObject({
       prestados: 1,
-      disponibles: 0,
+      stockActual: 0,
     });
   });
 });

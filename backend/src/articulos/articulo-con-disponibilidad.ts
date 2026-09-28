@@ -18,9 +18,10 @@ export interface ArticuloConDisponibilidad {
   esRetornable: boolean | null;
   stockActual: number | null;
   stockMinimo: number | null;
+  /** Unidades con préstamo ACTIVO (0 en no retornables). Informativo: en un
+   * retornable, `stock_actual` ya es lo disponible para prestar (baja al
+   * prestar, sube al devolver). */
   prestados: number;
-  /** null si todavía no se cargó el stock actual. */
-  disponibles: number | null;
   nivel: NivelAlerta | null;
   createdAt: Date;
   updatedAt: Date;
@@ -46,8 +47,6 @@ export function conDisponibilidad(
     stockActual: articulo.stockActual,
     stockMinimo: articulo.stockMinimo,
     prestados,
-    disponibles:
-      articulo.stockActual === null ? null : articulo.stockActual - prestados,
     nivel: clasificarNivel(articulo.stockActual, articulo.stockMinimo),
     createdAt: articulo.createdAt,
     updatedAt: articulo.updatedAt,

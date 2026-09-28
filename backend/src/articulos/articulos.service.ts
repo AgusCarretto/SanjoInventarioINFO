@@ -131,7 +131,6 @@ export class ArticulosService {
     // Sin relaciones cargadas: al guardar, TypeORM usa las columnas categoria_id y tipo_id.
     const articulo = await this.articulos.findOneBy({ id });
     if (!articulo) throw new NotFoundException(`No existe el artículo ${id}`);
-    const prestados = (await this.prestadosPorArticulo()).get(id) ?? 0;
 
     // Se valida el resultado final: cambiar solo la categoría no puede dejar un tipo ajeno.
     await this.validarReferencias(
@@ -148,21 +147,6 @@ export class ArticulosService {
       throw new ConflictException(
         'El artículo ya tiene préstamos o movimientos: no se puede cambiar su uso (retornable o consumible)',
       );
-    }
-    // R2: el total nunca puede quedar por debajo de lo que está prestado
-    // (y dejarlo sin dato equivale a perder ese total).
-    if (dto.stockActual !== undefined) {
-      if (dto.stockActual === null) {
-        if (prestados > 0) {
-          throw new ConflictException(
-            `No se puede dejar el stock sin dato: hay ${prestados} unidades prestadas`,
-          );
-        }
-      } else if (dto.stockActual < prestados) {
-        throw new ConflictException(
-          `No se puede dejar el stock en ${dto.stockActual}: hay ${prestados} unidades prestadas`,
-        );
-      }
     }
     Object.assign(articulo, dto);
     try {

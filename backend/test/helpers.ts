@@ -100,7 +100,6 @@ export async function crearPrestamo(
     repo.create({
       cantidad: 1,
       prestadoA: 'Prof. de prueba',
-      fechaDevolucionEsperada: '2099-01-01',
       estado: EstadoPrestamo.ACTIVO,
       ...datos,
     }),

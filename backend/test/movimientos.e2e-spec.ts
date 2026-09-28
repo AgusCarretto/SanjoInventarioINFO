@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { Movimiento } from '../src/movimientos/movimiento.entity.js';
-import { crearApp, crearArticulo, crearMovimiento, limpiarBase } from './helpers.js';
+import { crearApp, crearArticulo, crearMovimiento, crearPrestamo, limpiarBase } from './helpers.js';
 
 describe('Movimientos (e2e)', () => {
   let app: INestApplication;
@@ -33,7 +33,7 @@ describe('Movimientos (e2e)', () => {
       const { body } = await post({ articuloId: a.id, tipo: 'SALIDA' }).expect(
         201,
       );
-      expect(body).toMatchObject({ stockActual: 4, disponibles: 4, nivel: null });
+      expect(body).toMatchObject({ stockActual: 4, nivel: null });
 
       const movimientos = await movimientosDe(a.id);
       expect(movimientos).toHaveLength(1);
@@ -142,6 +142,29 @@ describe('Movimientos (e2e)', () => {
         detalle: 'Impresora de Secretaría',
         articulo: { nombre: 'Tóner', modelo: '26A' },
       });
+    });
+
+    it('incluye los préstamos devueltos como un evento más, mezclados por fecha', async () => {
+      const a = await crearArticulo(app, { nombre: 'Proyector', esRetornable: true, stockActual: 1 });
+      await crearPrestamo(app, {
+        articuloId: a.id,
+        prestadoA: 'Prof. Gómez',
+        estado: 'DEVUELTO' as never,
+        fechaDevolucionReal: new Date('2026-03-01'),
+      });
+      await crearMovimiento(app, {
+        articuloId: (await crearArticulo(app, { nombre: 'Cable' })).id,
+        fecha: new Date('2026-02-01'),
+      });
+      const { body } = await request(app.getHttpServer())
+        .get('/api/movimientos')
+        .expect(200);
+      expect(body[0]).toMatchObject({
+        tipo: 'DEVOLUCION',
+        detalle: 'Devuelto por Prof. Gómez',
+        articulo: { nombre: 'Proyector' },
+      });
+      expect(body[1]).toMatchObject({ tipo: 'ENTRADA' });
     });
   });
 

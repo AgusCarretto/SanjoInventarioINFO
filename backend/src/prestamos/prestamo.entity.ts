@@ -39,10 +39,6 @@ export class Prestamo {
   @Column({ name: 'fecha_salida', type: 'timestamptz', default: () => 'now()' })
   fechaSalida: Date;
 
-  /** 'AAAA-MM-DD' (columna date). */
-  @Column({ name: 'fecha_devolucion_esperada', type: 'date' })
-  fechaDevolucionEsperada: string;
-
   @Column({ name: 'fecha_devolucion_real', type: 'timestamptz', nullable: true })
   fechaDevolucionReal: Date | null;
 

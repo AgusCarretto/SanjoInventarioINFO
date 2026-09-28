@@ -11,10 +11,11 @@ export interface ArticuloEjemplo {
   stockMinimo: number;
 }
 
+// Los retornables ya cuentan con lo prestado restado: stockActual es lo disponible ahora mismo.
 export const ARTICULOS_EJEMPLO: readonly ArticuloEjemplo[] = [
-  { nombre: 'Proyector Epson EB-X06', categoria: 'Otros', tipo: 'Proyector', marca: 'Epson', modelo: 'EB-X06', esRetornable: true, stockActual: 4, stockMinimo: 2 },
+  { nombre: 'Proyector Epson EB-X06', categoria: 'Otros', tipo: 'Proyector', marca: 'Epson', modelo: 'EB-X06', esRetornable: true, stockActual: 3, stockMinimo: 2 },
   { nombre: 'Notebook Lenovo ThinkPad', categoria: 'Otros', tipo: 'Notebook', marca: 'Lenovo', modelo: 'ThinkPad', esRetornable: true, stockActual: 6, stockMinimo: 2 },
-  { nombre: 'Parlante portátil', categoria: 'Periféricos', tipo: 'Parlantes', esRetornable: true, stockActual: 1, stockMinimo: 1 },
+  { nombre: 'Parlante portátil', categoria: 'Periféricos', tipo: 'Parlantes', esRetornable: true, stockActual: 0, stockMinimo: 1 },
   { nombre: 'Cable HDMI 2 m', categoria: 'Otros', tipo: 'Cable de video (HDMI, VGA)', esRetornable: false, stockActual: 3, stockMinimo: 5 },
   { nombre: 'Cable de red Cat6', categoria: 'Redes', tipo: 'Cable de red', modelo: 'Cat6', esRetornable: false, stockActual: 0, stockMinimo: 10 },
   { nombre: 'Pilas AA', categoria: 'Otros', tipo: 'Pilas y baterías', modelo: 'AA', esRetornable: false, stockActual: 12, stockMinimo: 10 },

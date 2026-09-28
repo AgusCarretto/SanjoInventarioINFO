@@ -2,7 +2,6 @@ import { DataSource } from 'typeorm';
 import { Articulo } from '../articulos/articulo.entity.js';
 import { Categoria } from '../catalogo/categoria.entity.js';
 import { TipoArticulo } from '../catalogo/tipo-articulo.entity.js';
-import { formatearFechaLocal } from '../common/fecha.js';
 import { EstadoPrestamo, Prestamo } from '../prestamos/prestamo.entity.js';
 import { cargarCatalogoInicial } from './catalogo.js';
 import { ARTICULOS_EJEMPLO } from './datos-ejemplo.js';
@@ -68,7 +67,6 @@ export async function cargarDatosEjemplo(
         cantidad: 1,
         prestadoA: 'Prof. Gómez - 3° B',
         fechaSalida: enDias(-3),
-        fechaDevolucionEsperada: formatearFechaLocal(enDias(-1)), // vencido ayer
         estado: EstadoPrestamo.ACTIVO,
       }),
       manager.create(Prestamo, {
@@ -76,7 +74,6 @@ export async function cargarDatosEjemplo(
         cantidad: 1,
         prestadoA: 'Preceptoría 1° año',
         fechaSalida: enDias(-1),
-        fechaDevolucionEsperada: formatearFechaLocal(enDias(3)),
         estado: EstadoPrestamo.ACTIVO,
       }),
     ]);
