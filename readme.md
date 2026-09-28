@@ -1,6 +1,6 @@
 # Sistema de Gestión de Stock - Informática 💻
 
-Plataforma web interna para el control de inventario, el registro de préstamos de equipos y las alertas de reposición del Departamento de Informática del **Colegio San José de la Providencia**. Corre 100% local.
+Plataforma web interna para el control de inventario, el registro de préstamos de equipos, las alertas de reposición y la red del Departamento de Informática del **Colegio San José de la Providencia**. Corre 100% local.
 
 ## Tecnologías
 
@@ -96,6 +96,7 @@ Start-ScheduledTask -TaskName SanjoInventario
 | Movimientos | `GET /movimientos` (historial completo, más reciente primero) y `POST /movimientos` (registra una entrada o salida de stock de un artículo consumible; ver más abajo) |
 | Préstamos | `GET /prestamos` (solo los activos), `POST /prestamos` (presta) y `PATCH /prestamos/:id/devolver` (devuelve; ver más abajo) |
 | Alertas | `GET /alertas/stock` |
+| Red | `GET/POST/PATCH/DELETE /red/equipos` (IPs fijas) y `GET/PATCH /red/config` (DNS de toda la red) |
 
 ## Datos de un artículo
 
@@ -131,6 +132,10 @@ Reglas: solo artículos de **uso Retornable**, y no se puede prestar más de lo 
 ## Movimientos (historial)
 
 La pantalla **Movimientos** lista todas las entradas y salidas de stock más las devoluciones de préstamos, más reciente primero, con el artículo, la cantidad y el detalle (quién lo tenía, en el caso de una devolución). Se puede buscar por artículo, modelo o detalle.
+
+## Red (IPs del colegio)
+
+La pantalla **Red** lleva la lista de PCs con IP fija (nombre o ubicación, IP y puerta de enlace) y, arriba, el DNS y DNS alternativo de toda la red (un solo valor, no por equipo). **Nueva IP** agrega una fila; cada una se puede editar o eliminar. No se puede repetir una IP.
 
 ## Catálogo de categorías y tipos (editar con SQL)
 
@@ -171,6 +176,8 @@ Desde **Artículos**, el botón **Backup** descarga un CSV con todos los artícu
 - **Movimientos:** pantalla con el historial completo de entradas, salidas y devoluciones de préstamos, buscable por artículo, modelo o detalle.
 - **Préstamos:** pantalla con lo que está prestado ahora mismo; prestar resta del stock disponible del artículo y devolver lo suma de vuelta.
 - **Backup:** descarga manual en CSV de todos los artículos y su stock, desde la pantalla Artículos.
+- **Login:** usuario y contraseña para entrar, sesión de 30 días.
+- **Red:** pantalla con las IPs fijas del colegio y el DNS de toda la red.
 - **Entrega 2:** completa.
 
 Diseño completo: [docs/superpowers/specs/2026-09-18-sistema-stock-informatica-design.md](docs/superpowers/specs/2026-09-18-sistema-stock-informatica-design.md).
