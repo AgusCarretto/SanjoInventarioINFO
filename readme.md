@@ -68,7 +68,7 @@ Node 24 y PostgreSQL 18 corriendo en `localhost:5432`.
 |---|---|
 | Artículos | `GET /articulos`, `POST /articulos`, `GET`, `PATCH` y `DELETE /articulos/:id` |
 | Catálogo | `GET /catalogo` (categorías con sus tipos, para las listas del formulario) |
-| Movimientos | `POST /movimientos` (registra una entrada o salida de stock de un artículo consumible; ver más abajo) |
+| Movimientos | `GET /movimientos` (historial completo, más reciente primero) y `POST /movimientos` (registra una entrada o salida de stock de un artículo consumible; ver más abajo) |
 | Alertas | `GET /alertas/stock` |
 
 ## Datos de un artículo
@@ -87,6 +87,12 @@ Solo el **nombre** es obligatorio. Todo lo demás puede quedar vacío ("sin dato
 Desde **Inicio**, el cartel "Registrar uso de stock" abre una ventana donde buscás un artículo por nombre, modelo, compatibilidad o **a quién le sirve** (por ejemplo, escribiendo "Laura" encontrás el tóner que ella usa) y tocás **Usar 1** para descontar una unidad. Por dentro registra un movimiento de salida (tabla `movimientos`) y resta del `stock_actual`.
 
 Reglas: solo para artículos de **uso Consumible**, con stock cargado y mayor a 0. Un artículo retornable, sin uso definido o sin stock disponible muestra por qué no se puede, en vez de ofrecer el botón.
+
+Al lado de **Usar 1** hay un botón **+ Detalle** opcional, por si querés anotar en qué se gastó (por ejemplo "impresora de Secretaría").
+
+## Movimientos (historial)
+
+La pantalla **Movimientos** lista todas las entradas y salidas de stock, más reciente primero, con el artículo, la cantidad y el detalle (si se cargó). Se puede buscar por artículo, modelo o detalle.
 
 ## Catálogo de categorías y tipos (editar con SQL)
 
@@ -116,7 +122,8 @@ Un artículo entra en alerta cuando `stock_actual <= stock_minimo`: **Sin stock*
 - **Catálogo y datos de compra:** categorías y tipos en listas desplegables editables con SQL, y marca, modelo y compatibilidad en cada artículo. El reporte de compra los incluye.
 - **Nombres repetidos:** distinguidos por modelo (útil para varios tóners, por ejemplo).
 - **A quién le sirve:** campo de texto libre en cada artículo, también buscable desde "Registrar uso de stock".
-- **Registrar uso de stock:** acceso rápido desde Inicio para descontar una unidad de un consumible.
-- **Entrega 2:** todavía falta la pantalla de Préstamos, y la de Movimientos (con el historial completo de entradas y salidas).
+- **Registrar uso de stock:** acceso rápido desde Inicio para descontar una unidad de un consumible, con detalle opcional de en qué se usó.
+- **Movimientos:** pantalla con el historial completo de entradas y salidas, buscable por artículo, modelo o detalle.
+- **Entrega 2:** todavía falta la pantalla de Préstamos.
 
 Diseño completo: [docs/superpowers/specs/2026-09-18-sistema-stock-informatica-design.md](docs/superpowers/specs/2026-09-18-sistema-stock-informatica-design.md).
