@@ -91,6 +91,10 @@ Reglas: solo para artículos de **uso Consumible**, con stock cargado y mayor a 
 
 Al lado de **Usar 1** hay un botón **+ Detalle** opcional, por si querés anotar en qué se gastó (por ejemplo "impresora de Secretaría").
 
+## Reponer stock (sumar una entrada)
+
+Al lado del cartel anterior, **Reponer stock** abre la misma búsqueda pero para sumar: cada fila tiene un campo de **cantidad** (por defecto 1, lo cambiás si repusiste varias unidades) y un botón **Reponer**. Por dentro registra un movimiento de entrada y suma al `stock_actual`. Mismas reglas que "Usar 1" (solo consumibles con stock cargado), con el mismo **+ Detalle** opcional (por ejemplo "Factura 123").
+
 ## Préstamos
 
 La pantalla **Préstamos** lista solo lo que está prestado ahora mismo: artículo, a quién, fecha de salida y cantidad. **Nuevo préstamo** abre una ventana con los artículos retornables que tienen algo disponible, cantidad y a quién se le presta.
@@ -126,6 +130,10 @@ En un **consumible**, `stock_actual` sube y baja con los movimientos de entrada 
 
 Un artículo entra en alerta cuando `stock_actual <= stock_minimo`: **Sin stock** si es 0, **Stock bajo** en cualquier otro caso. Como `stock_actual` ya es lo disponible, un préstamo puede dejar a un retornable en alerta si no queda nada libre para prestar. El panel de alertas permite descargar un reporte de compra en CSV, listo para abrir en Excel.
 
+## Backup
+
+Desde **Artículos**, el botón **Backup** descarga un CSV con todos los artículos y su stock actual (no solo los que están en alerta), listo para abrir en Excel. Es un backup manual: la idea es subirlo a un Drive periódicamente. No reemplaza un backup real de la base de datos, pero cubre lo esencial (qué hay y cuánto stock) con un solo click.
+
 ## Estado
 
 - **Entrega 1:** artículos, alertas de stock y dashboard.
@@ -134,8 +142,10 @@ Un artículo entra en alerta cuando `stock_actual <= stock_minimo`: **Sin stock*
 - **Nombres repetidos:** distinguidos por modelo (útil para varios tóners, por ejemplo).
 - **A quién le sirve:** campo de texto libre en cada artículo, también buscable desde "Registrar uso de stock".
 - **Registrar uso de stock:** acceso rápido desde Inicio para descontar una unidad de un consumible, con detalle opcional de en qué se usó.
+- **Reponer stock:** acceso rápido desde Inicio para sumar stock a un consumible (por ejemplo, una compra), con cantidad y detalle opcional.
 - **Movimientos:** pantalla con el historial completo de entradas, salidas y devoluciones de préstamos, buscable por artículo, modelo o detalle.
 - **Préstamos:** pantalla con lo que está prestado ahora mismo; prestar resta del stock disponible del artículo y devolver lo suma de vuelta.
+- **Backup:** descarga manual en CSV de todos los artículos y su stock, desde la pantalla Artículos.
 - **Entrega 2:** completa.
 
 Diseño completo: [docs/superpowers/specs/2026-09-18-sistema-stock-informatica-design.md](docs/superpowers/specs/2026-09-18-sistema-stock-informatica-design.md).
