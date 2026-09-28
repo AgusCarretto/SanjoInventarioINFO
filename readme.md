@@ -57,10 +57,29 @@ Node 24 y PostgreSQL 18 corriendo en `localhost:5432`.
 
    Si el backend no está en `http://localhost:3000/api`, copiar `.env.example` a `.env` y ajustar `VITE_API_URL`.
 
+## Uso diario (esta PC, siempre prendido)
+
+Para el uso normal del departamento **no hace falta nada de lo anterior**: el sistema ya queda instalado como un servicio de esta PC.
+
+- Arranca solo al iniciar sesión en Windows (tarea `SanjoInventario` en el Programador de tareas), o se puede iniciar a mano con el ícono **"Sistema de Stock"** del Escritorio (doble click en `iniciar.bat`). Si ya está corriendo por la tarea programada y lo abrís igual, la ventana nueva se cierra sola con un aviso de puerto ocupado — no rompe nada.
+- Se usa siempre desde **http://localhost:3000** (ya no `:5173`; el backend compilado sirve el frontend compilado, un solo proceso).
+- Para pararlo: cerrar la ventana de consola si lo iniciaste con el ícono, o `Stop-ScheduledTask -TaskName SanjoInventario` en PowerShell si lo inició la tarea. Para volver a prenderlo, el ícono del Escritorio o reiniciar sesión.
+
+**Para actualizar** (cuando haya una versión nueva del código):
+
+```powershell
+git pull
+cd frontend; npm install; npm run build; cd ..
+cd backend; npm install; npm run build; cd ..
+Stop-ScheduledTask -TaskName SanjoInventario 2>$null
+Start-ScheduledTask -TaskName SanjoInventario
+```
+
 ## Tests
 
 - **Backend:** `npm test` (unitarios) y `npm run test:e2e` (usa la base `InventarioInformatica_test` y nunca toca la principal).
 - **Frontend:** `npm test` (funciones puras) y `npm run lint`.
+- La instalación como servicio de esta PC (tarea programada, acceso directo, `iniciar.bat`) es específica de esta máquina y no se prueba con Vitest; se verificó a mano arrancándola y pidiendo `/api/articulos` y una ruta del frontend.
 
 ## API (prefijo `/api`)
 
