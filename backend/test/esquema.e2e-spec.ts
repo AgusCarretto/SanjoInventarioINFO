@@ -61,6 +61,7 @@ describe('Esquema de base de datos', () => {
       'marca',
       'modelo',
       'compatibilidad',
+      'para_quienes',
       'es_retornable',
       'stock_actual',
       'stock_minimo',

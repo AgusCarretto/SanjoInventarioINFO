@@ -20,6 +20,7 @@ function art(
     marca: null,
     modelo: null,
     compatibilidad: null,
+    paraQuienes: null,
     esRetornable: false,
     stockActual,
     stockMinimo,
@@ -90,7 +91,7 @@ describe('AlertasService', () => {
     });
   });
 
-  it('copia categoría, tipo, marca, modelo y compatibilidad de cada artículo', async () => {
+  it('copia categoría, tipo, marca, modelo, compatibilidad y a quién le sirve de cada artículo', async () => {
     const r = await servicioCon([
       art(1, 'Tóner HP 26A', 1, 3, {
         categoria: 'Impresoras',
@@ -98,6 +99,7 @@ describe('AlertasService', () => {
         marca: 'HP',
         modelo: '26A',
         compatibilidad: 'LaserJet Pro M402',
+        paraQuienes: 'Laura, Secretaría',
       }),
     ]).obtenerAlertasDeStock();
     expect(r.items[0]).toMatchObject({
@@ -106,6 +108,7 @@ describe('AlertasService', () => {
       marca: 'HP',
       modelo: '26A',
       compatibilidad: 'LaserJet Pro M402',
+      paraQuienes: 'Laura, Secretaría',
     });
   });
 

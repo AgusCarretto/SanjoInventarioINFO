@@ -13,6 +13,8 @@ export interface ArticuloConDisponibilidad {
   marca: string | null;
   modelo: string | null;
   compatibilidad: string | null;
+  /** A quién le sirve, ej. nombres de personas que usan ese tóner. Texto libre. */
+  paraQuienes: string | null;
   esRetornable: boolean | null;
   stockActual: number | null;
   stockMinimo: number | null;
@@ -39,6 +41,7 @@ export function conDisponibilidad(
     marca: articulo.marca,
     modelo: articulo.modelo,
     compatibilidad: articulo.compatibilidad,
+    paraQuienes: articulo.paraQuienes,
     esRetornable: articulo.esRetornable,
     stockActual: articulo.stockActual,
     stockMinimo: articulo.stockMinimo,

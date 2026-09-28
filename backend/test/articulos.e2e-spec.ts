@@ -107,6 +107,7 @@ describe('Artículos (e2e)', () => {
         marca: 'Logitech',
         modelo: 'Z120',
         compatibilidad: 'Cualquier equipo con salida de 3,5 mm',
+        paraQuienes: 'Laura, Secretaría',
         esRetornable: true,
         stockActual: 1,
         stockMinimo: 1,
@@ -127,6 +128,7 @@ describe('Artículos (e2e)', () => {
         marca: 'Logitech',
         modelo: 'Z120',
         compatibilidad: 'Cualquier equipo con salida de 3,5 mm',
+        paraQuienes: 'Laura, Secretaría',
       });
     });
 
@@ -150,6 +152,7 @@ describe('Artículos (e2e)', () => {
         marca: '  HP ',
         modelo: ' 26A ',
         compatibilidad: ' LaserJet Pro M402, M426 ',
+        paraQuienes: ' Laura, Secretaría ',
         esRetornable: false,
         stockActual: 2,
         stockMinimo: 5,
@@ -163,6 +166,7 @@ describe('Artículos (e2e)', () => {
         marca: 'HP',
         modelo: '26A',
         compatibilidad: 'LaserJet Pro M402, M426',
+        paraQuienes: 'Laura, Secretaría',
         esRetornable: false,
         stockActual: 2,
         stockMinimo: 5,
@@ -183,6 +187,7 @@ describe('Artículos (e2e)', () => {
         marca: null,
         modelo: null,
         compatibilidad: null,
+        paraQuienes: null,
         esRetornable: null,
         stockActual: null,
         stockMinimo: null,
@@ -200,6 +205,7 @@ describe('Artículos (e2e)', () => {
         marca: '   ',
         modelo: '',
         compatibilidad: '  ',
+        paraQuienes: '  ',
         esRetornable: null,
         stockActual: null,
         stockMinimo: null,
@@ -210,6 +216,7 @@ describe('Artículos (e2e)', () => {
         marca: null,
         modelo: null,
         compatibilidad: null,
+        paraQuienes: null,
         esRetornable: null,
         stockActual: null,
         stockMinimo: null,
@@ -232,6 +239,10 @@ describe('Artículos (e2e)', () => {
       [
         'compatibilidad de más de 255 caracteres',
         { nombre: 'A', compatibilidad: 'x'.repeat(256) },
+      ],
+      [
+        'a quién le sirve de más de 255 caracteres',
+        { nombre: 'A', paraQuienes: 'x'.repeat(256) },
       ],
     ])('responde 400 con %s', async (_caso, cuerpo) => {
       await post(cuerpo).expect(400);
@@ -291,16 +302,18 @@ describe('Artículos (e2e)', () => {
         stockActual: 8,
         marca: 'Epson',
         modelo: 'EB-X06',
+        paraQuienes: 'Sala de profesores',
       }).expect(200);
       expect(body).toMatchObject({
         stockActual: 8,
         marca: 'Epson',
         modelo: 'EB-X06',
+        paraQuienes: 'Sala de profesores',
         nivel: null,
       });
     });
 
-    it('permite dejar en null categoría, tipo, marca, modelo, compatibilidad, uso y stocks', async () => {
+    it('permite dejar en null categoría, tipo, marca, modelo, compatibilidad, a quién le sirve, uso y stocks', async () => {
       const a = await crearArticulo(app, {
         nombre: 'Cable',
         categoriaId: await idCategoria(app, 'Redes'),
@@ -308,6 +321,7 @@ describe('Artículos (e2e)', () => {
         marca: 'Furukawa',
         modelo: 'Cat6',
         compatibilidad: 'Uso interior',
+        paraQuienes: 'Sala de profesores',
         esRetornable: false,
         stockActual: 3,
         stockMinimo: 5,
@@ -318,6 +332,7 @@ describe('Artículos (e2e)', () => {
         marca: null,
         modelo: null,
         compatibilidad: null,
+        paraQuienes: null,
         esRetornable: null,
         stockActual: null,
         stockMinimo: null,
@@ -330,6 +345,7 @@ describe('Artículos (e2e)', () => {
         marca: null,
         modelo: null,
         compatibilidad: null,
+        paraQuienes: null,
         esRetornable: null,
         stockActual: null,
         stockMinimo: null,

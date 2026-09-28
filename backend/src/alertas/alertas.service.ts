@@ -29,6 +29,7 @@ export class AlertasService {
               marca: a.marca,
               modelo: a.modelo,
               compatibilidad: a.compatibilidad,
+              paraQuienes: a.paraQuienes,
               esRetornable: a.esRetornable,
               stockActual: a.stockActual,
               stockMinimo: a.stockMinimo,

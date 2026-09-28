@@ -8,6 +8,7 @@ export interface AlertaStockItem {
   marca: string | null;
   modelo: string | null;
   compatibilidad: string | null;
+  paraQuienes: string | null;
   esRetornable: boolean | null;
   stockActual: number;
   stockMinimo: number;

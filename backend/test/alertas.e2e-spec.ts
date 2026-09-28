@@ -101,7 +101,7 @@ describe('GET /api/alertas/stock (e2e)', () => {
     expect(body.resumen).toEqual({ total: 0, sinStock: 0, bajos: 0 });
   });
 
-  it('cada alerta trae categoría, tipo, marca, modelo y compatibilidad para comprar lo correcto', async () => {
+  it('cada alerta trae categoría, tipo, marca, modelo, compatibilidad y a quién le sirve para comprar lo correcto', async () => {
     await crearArticulo(app, {
       nombre: 'Tóner HP 26A',
       categoriaId: await idCategoria(app, 'Impresoras'),
@@ -109,6 +109,7 @@ describe('GET /api/alertas/stock (e2e)', () => {
       marca: 'HP',
       modelo: '26A',
       compatibilidad: 'LaserJet Pro M402, M426',
+      paraQuienes: 'Laura, Secretaría',
       stockActual: 1,
       stockMinimo: 3,
     });
@@ -120,6 +121,7 @@ describe('GET /api/alertas/stock (e2e)', () => {
       marca: 'HP',
       modelo: '26A',
       compatibilidad: 'LaserJet Pro M402, M426',
+      paraQuienes: 'Laura, Secretaría',
       faltante: 2,
       nivel: 'BAJO',
     });

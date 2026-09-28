@@ -60,6 +60,14 @@ export class CreateArticuloDto {
   compatibilidad?: string | null;
 
   @IsOptional()
+  @Transform(textoOpcional)
+  @IsString({ message: 'El campo "a quién le sirve" tiene que ser un texto' })
+  @MaxLength(255, {
+    message: 'El campo "a quién le sirve" puede tener hasta 255 caracteres',
+  })
+  paraQuienes?: string | null;
+
+  @IsOptional()
   @IsBoolean({ message: 'El uso tiene que ser retornable o consumible' })
   esRetornable?: boolean | null;
 

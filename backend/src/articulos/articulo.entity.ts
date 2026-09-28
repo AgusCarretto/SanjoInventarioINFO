@@ -59,6 +59,10 @@ export class Articulo {
   @Column({ type: 'varchar', length: 255, nullable: true })
   compatibilidad: string | null;
 
+  /** Texto libre: a quién le sirve (ej. nombres de personas que usan ese tóner). */
+  @Column({ name: 'para_quienes', type: 'varchar', length: 255, nullable: true })
+  paraQuienes: string | null;
+
   /** Uso: true = retornable (se presta y se devuelve), false = consumible, null = sin definir. */
   @Column({ name: 'es_retornable', type: 'boolean', nullable: true })
   esRetornable: boolean | null;
