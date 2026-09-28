@@ -76,7 +76,7 @@ Node 24 y PostgreSQL 18 corriendo en `localhost:5432`.
 Solo el **nombre** es obligatorio. Todo lo demás puede quedar vacío ("sin dato"):
 
 - **Categoría** y **Tipo:** listas desplegables del catálogo. El tipo depende de la categoría elegida (por ejemplo, en *Impresoras*: Cartuchos, Tóner, Tinta, Impresora, Componentes, Otros).
-- **Marca**, **modelo** y **compatibilidad:** texto libre. La compatibilidad indica con qué equipos o modelos funciona, por ejemplo un tóner o una fuente.
+- **Marca**, **modelo**, **compatibilidad** y **a quién le sirve:** texto libre. La compatibilidad indica con qué equipos o modelos funciona (por ejemplo un tóner o una fuente); "a quién le sirve" son los nombres de las personas que lo usan, separados por coma (por ejemplo, "Laura, Secretaría" en un tóner) — también sirve para buscarlo después.
 - **Uso:** *Consumible* (se gasta) o *Retornable* (se presta y se devuelve). Se puede cambiar mientras el artículo no tenga préstamos ni movimientos.
 - **Stock actual** y **stock mínimo.**
 
@@ -84,7 +84,7 @@ Solo el **nombre** es obligatorio. Todo lo demás puede quedar vacío ("sin dato
 
 ## Registrar uso de stock (consumir una unidad)
 
-Desde **Inicio**, el cartel "Registrar uso de stock" abre una ventana donde buscás un artículo por nombre, modelo o compatibilidad y tocás **Usar 1** para descontar una unidad. Por dentro registra un movimiento de salida (tabla `movimientos`) y resta del `stock_actual`.
+Desde **Inicio**, el cartel "Registrar uso de stock" abre una ventana donde buscás un artículo por nombre, modelo, compatibilidad o **a quién le sirve** (por ejemplo, escribiendo "Laura" encontrás el tóner que ella usa) y tocás **Usar 1** para descontar una unidad. Por dentro registra un movimiento de salida (tabla `movimientos`) y resta del `stock_actual`.
 
 Reglas: solo para artículos de **uso Consumible**, con stock cargado y mayor a 0. Un artículo retornable, sin uso definido o sin stock disponible muestra por qué no se puede, en vez de ofrecer el botón.
 
@@ -115,6 +115,7 @@ Un artículo entra en alerta cuando `stock_actual <= stock_minimo`: **Sin stock*
 - **Formulario de artículos:** desde la pantalla **Artículos** se pueden agregar, editar y eliminar artículos. Solo el nombre es obligatorio; lo demás puede quedar vacío ("sin dato"). Un artículo sin stock actual o sin mínimo no genera alertas.
 - **Catálogo y datos de compra:** categorías y tipos en listas desplegables editables con SQL, y marca, modelo y compatibilidad en cada artículo. El reporte de compra los incluye.
 - **Nombres repetidos:** distinguidos por modelo (útil para varios tóners, por ejemplo).
+- **A quién le sirve:** campo de texto libre en cada artículo, también buscable desde "Registrar uso de stock".
 - **Registrar uso de stock:** acceso rápido desde Inicio para descontar una unidad de un consumible.
 - **Entrega 2:** todavía falta la pantalla de Préstamos, y la de Movimientos (con el historial completo de entradas y salidas).
 
