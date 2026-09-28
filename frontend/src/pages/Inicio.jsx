@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { OctagonAlert, Package, TriangleAlert } from 'lucide-react';
+import UsarArticuloModal from '../components/articulos/UsarArticuloModal.jsx';
 import AlertasStock from '../components/dashboard/AlertasStock.jsx';
 import StatCard from '../components/dashboard/StatCard.jsx';
+import UsarStockCard from '../components/dashboard/UsarStockCard.jsx';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import { useApi } from '../hooks/useApi.js';
 
@@ -8,6 +11,14 @@ export default function Inicio() {
   const alertas = useApi('/alertas/stock');
   const articulos = useApi('/articulos');
   const resumen = alertas.data?.resumen;
+  const [modalUsarAbierto, setModalUsarAbierto] = useState(false);
+
+  // Usar stock puede cambiar qué artículos están en alerta: se refresca todo al cerrar.
+  const cerrarModalUsar = () => {
+    setModalUsarAbierto(false);
+    alertas.reload();
+    articulos.reload();
+  };
 
   return (
     <>
@@ -30,6 +41,9 @@ export default function Inicio() {
         />
       </div>
       <div className="mt-6">
+        <UsarStockCard onClick={() => setModalUsarAbierto(true)} />
+      </div>
+      <div className="mt-6">
         <AlertasStock
           datos={alertas.data}
           cargando={alertas.loading}
@@ -37,6 +51,8 @@ export default function Inicio() {
           onReintentar={alertas.reload}
         />
       </div>
+
+      {modalUsarAbierto && <UsarArticuloModal alCerrar={cerrarModalUsar} />}
     </>
   );
 }

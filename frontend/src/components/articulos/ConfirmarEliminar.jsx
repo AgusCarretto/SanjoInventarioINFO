@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { TriangleAlert } from 'lucide-react';
 import { apiSend } from '../../lib/api.js';
+import Aviso from '../ui/Aviso.jsx';
 import Dialogo from '../ui/Dialogo.jsx';
 
 export default function ConfirmarEliminar({ articulo, alEliminar, alCerrar }) {
@@ -26,10 +26,9 @@ export default function ConfirmarEliminar({ articulo, alEliminar, alCerrar }) {
           Vas a eliminar <strong>{articulo.nombre}</strong>. Esta acción no se puede deshacer.
         </p>
         {error && (
-          <div role="alert" className="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-900">
-            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-red-700" aria-hidden="true" />
+          <Aviso>
             <p>{error}</p>
-          </div>
+          </Aviso>
         )}
       </div>
       <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4">

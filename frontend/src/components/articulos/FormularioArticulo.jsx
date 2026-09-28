@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { RefreshCw, TriangleAlert } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { useApi } from '../../hooks/useApi.js';
 import { apiSend } from '../../lib/api.js';
 import { armarPayload, tiposDeCategoria, valoresIniciales } from '../../lib/articuloForm.js';
+import Aviso from '../ui/Aviso.jsx';
 import Dialogo from '../ui/Dialogo.jsx';
 
 const CLASE_CAMPO =
@@ -20,15 +21,6 @@ function Campo({ id, etiqueta, ayuda, children }) {
           {ayuda}
         </p>
       )}
-    </div>
-  );
-}
-
-function Aviso({ children }) {
-  return (
-    <div role="alert" className="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-900">
-      <TriangleAlert className="mt-0.5 size-4 shrink-0 text-red-700" aria-hidden="true" />
-      <div>{children}</div>
     </div>
   );
 }
