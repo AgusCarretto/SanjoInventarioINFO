@@ -69,6 +69,7 @@ Node 24 y PostgreSQL 18 corriendo en `localhost:5432`.
 | Artículos | `GET /articulos`, `POST /articulos`, `GET`, `PATCH` y `DELETE /articulos/:id` |
 | Catálogo | `GET /catalogo` (categorías con sus tipos, para las listas del formulario) |
 | Movimientos | `GET /movimientos` (historial completo, más reciente primero) y `POST /movimientos` (registra una entrada o salida de stock de un artículo consumible; ver más abajo) |
+| Préstamos | `GET /prestamos` (solo los activos), `POST /prestamos` (presta) y `PATCH /prestamos/:id/devolver` (devuelve; ver más abajo) |
 | Alertas | `GET /alertas/stock` |
 
 ## Datos de un artículo
@@ -90,9 +91,17 @@ Reglas: solo para artículos de **uso Consumible**, con stock cargado y mayor a 
 
 Al lado de **Usar 1** hay un botón **+ Detalle** opcional, por si querés anotar en qué se gastó (por ejemplo "impresora de Secretaría").
 
+## Préstamos
+
+La pantalla **Préstamos** lista solo lo que está prestado ahora mismo: artículo, a quién, fecha de salida y cantidad. **Nuevo préstamo** abre una ventana con los artículos retornables que tienen algo disponible, cantidad y a quién se le presta.
+
+Al **devolver**, la cantidad se suma de vuelta al stock disponible del artículo y el préstamo desaparece de esta pantalla — pasa a figurar como una devolución más en **Movimientos**, con quién lo tenía.
+
+Reglas: solo artículos de **uso Retornable**, y no se puede prestar más de lo que hay disponible.
+
 ## Movimientos (historial)
 
-La pantalla **Movimientos** lista todas las entradas y salidas de stock, más reciente primero, con el artículo, la cantidad y el detalle (si se cargó). Se puede buscar por artículo, modelo o detalle.
+La pantalla **Movimientos** lista todas las entradas y salidas de stock más las devoluciones de préstamos, más reciente primero, con el artículo, la cantidad y el detalle (quién lo tenía, en el caso de una devolución). Se puede buscar por artículo, modelo o detalle.
 
 ## Catálogo de categorías y tipos (editar con SQL)
 
@@ -111,9 +120,11 @@ Los cambios se ven en el formulario apenas se recarga la página, sin reiniciar 
 
 ## Cómo se calcula el stock
 
-`stock_actual` es el **total del colegio**: no baja cuando se presta un equipo. Lo prestado y lo disponible se calculan aparte (`disponibles = stock_actual − prestados`).
+En un artículo **retornable**, `stock_actual` es directamente lo **disponible para prestar**: baja al prestar (la cantidad que sea) y sube al devolver. No hay un total separado ni un campo "disponibles"; `prestados` (cuántas unidades están afuera ahora) es solo informativo.
 
-Un artículo entra en alerta cuando `stock_actual <= stock_minimo`: **Sin stock** si es 0, **Stock bajo** en cualquier otro caso. Por eso un préstamo nunca dispara una alerta de compra. El panel de alertas permite descargar un reporte de compra en CSV, listo para abrir en Excel.
+En un **consumible**, `stock_actual` sube y baja con los movimientos de entrada y salida (o con la edición manual del artículo).
+
+Un artículo entra en alerta cuando `stock_actual <= stock_minimo`: **Sin stock** si es 0, **Stock bajo** en cualquier otro caso. Como `stock_actual` ya es lo disponible, un préstamo puede dejar a un retornable en alerta si no queda nada libre para prestar. El panel de alertas permite descargar un reporte de compra en CSV, listo para abrir en Excel.
 
 ## Estado
 
@@ -123,7 +134,8 @@ Un artículo entra en alerta cuando `stock_actual <= stock_minimo`: **Sin stock*
 - **Nombres repetidos:** distinguidos por modelo (útil para varios tóners, por ejemplo).
 - **A quién le sirve:** campo de texto libre en cada artículo, también buscable desde "Registrar uso de stock".
 - **Registrar uso de stock:** acceso rápido desde Inicio para descontar una unidad de un consumible, con detalle opcional de en qué se usó.
-- **Movimientos:** pantalla con el historial completo de entradas y salidas, buscable por artículo, modelo o detalle.
-- **Entrega 2:** todavía falta la pantalla de Préstamos.
+- **Movimientos:** pantalla con el historial completo de entradas, salidas y devoluciones de préstamos, buscable por artículo, modelo o detalle.
+- **Préstamos:** pantalla con lo que está prestado ahora mismo; prestar resta del stock disponible del artículo y devolver lo suma de vuelta.
+- **Entrega 2:** completa.
 
 Diseño completo: [docs/superpowers/specs/2026-09-18-sistema-stock-informatica-design.md](docs/superpowers/specs/2026-09-18-sistema-stock-informatica-design.md).

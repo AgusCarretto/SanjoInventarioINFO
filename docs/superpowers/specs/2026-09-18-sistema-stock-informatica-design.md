@@ -13,7 +13,7 @@ Sistema web interno para que el Departamento de Informática controle el inventa
 | Tema | Decisión | Motivo |
 |---|---|---|
 | Base de datos | PostgreSQL 18 **local**, ya instalado como servicio de Windows (puerto 5432). **No** se genera `docker-compose.yml`. | Docker no está instalado en la máquina y WSL 1 no es compatible con la configuración actual. |
-| Stock de retornables | `stock_actual` es el **total del colegio** y no cambia al prestar. `prestados` y `disponibles` se calculan al leer. | Decisión del usuario. Un préstamo nunca dispara una alerta de compra. |
+| Stock de retornables | *(Reemplazada, ver fila "Stock de retornables (v2)" al final de la tabla).* | — |
 | Enfoque | Dos apps independientes en un monorepo simple; `stock_actual` es una columna guardada. | Simple y suficiente para ~30 artículos. Alternativas descartadas: npm workspaces con tipos compartidos (más configuración que beneficio) y stock derivado del historial (contradice el pedido, que define `stock_actual` como columna). |
 | Tailwind | v4, paleta en el CSS con `@theme`. **No** hay `tailwind.config.js`. | Misma convención que `sanjoActivities`. En v4 el archivo JS es solo una vía de compatibilidad (`@config`). |
 | Frontend | React 19 + Vite 8 + React Router 7, JSX plano (sin TypeScript), `lucide-react`, oxlint. | Consistencia con `sanjoActivities`. |
@@ -23,6 +23,9 @@ Sistema web interno para que el Departamento de Informática controle el inventa
 | A quién le sirve | Nuevo campo `para_quienes` (texto libre, opcional), igual de "buscable" que `modelo` y `compatibilidad` en el modal de uso rápido. | Pedido del usuario: en un tóner, poder anotar qué personas lo usan (ej. "Laura") y encontrarlo buscando ese nombre. |
 | Esquema | `synchronize: true` de TypeORM fuera de producción. Sin migraciones por ahora. | Local, datos de ejemplo. Antes de cualquier despliegue real hay que pasar a migraciones. |
 | Idioma | Dominio y textos de UI en español (Argentina). Clases y propiedades en español/camelCase, columnas en snake_case. | Vocabulario del departamento y del pedido original. |
+| Stock de retornables (v2) | `stock_actual` pasa a ser directamente lo **disponible para prestar**: prestar resta la cantidad, devolver la suma. No hay `disponibles` como campo aparte; `prestados` queda solo informativo. | Pedido del usuario, reemplaza la decisión original de la primera fila: "no quiero un disponibles". Efecto colateral asumido: un préstamo ahora sí puede dejar a un artículo en alerta de stock bajo (antes no, porque el total no cambiaba). |
+| Préstamo sin fecha esperada | El préstamo no tiene `fecha_devolucion_esperada` ni estado ATRASADO — solo `fecha_salida`, `fecha_devolucion_real` y ACTIVO/DEVUELTO. | Pedido del usuario: simplificar, no hace falta trackear vencimientos. |
+| Devolución = movimiento | Al devolver, el préstamo desaparece de la pantalla Préstamos (que solo lista los ACTIVO) y pasa a figurar en el historial de Movimientos como un evento más (tipo `DEVOLUCION`), sin insertarse en la tabla `movimientos` (esa tabla es solo de consumibles). `GET /movimientos` combina ambas fuentes al leer. | Pedido del usuario: "cuando cambie a devuelto pase a ser un movimiento pero que desaparezca de prestados". Se resolvió combinando al leer, en vez de mezclar conceptos de préstamo dentro de la tabla de consumibles. |
 
 ## 3. Estructura del repositorio
 
@@ -83,15 +86,14 @@ articulos
   created_at, updated_at   timestamptz
   UNIQUE (nombre, modelo)   -- se puede repetir el nombre si cambia el modelo (o si los dos tienen modelo NULL)
 
-prestamos                                    -- solo artículos retornables
+prestamos                                    -- solo artículos retornables; solo los ACTIVO se listan
   id              serial PK
   articulo_id     -> articulos(id) ON DELETE RESTRICT, NOT NULL
   cantidad        int NOT NULL CHECK (>= 1)
   prestado_a      varchar(120) NOT NULL      -- texto libre: docente / curso / área
   fecha_salida    timestamptz NOT NULL DEFAULT now()
-  fecha_devolucion_esperada  date NOT NULL
   fecha_devolucion_real      timestamptz NULL
-  estado          enum(ACTIVO, DEVUELTO) NOT NULL DEFAULT 'ACTIVO'
+  estado          enum(ACTIVO, DEVUELTO) NOT NULL DEFAULT 'ACTIVO'  -- sin ATRASADO
 
 movimientos                                  -- solo artículos NO retornables, con uso definido
   id              serial PK
@@ -103,9 +105,7 @@ movimientos                                  -- solo artículos NO retornables, 
 ```
 
 **Calculado al leer (no se guarda):**
-- `prestados` = suma de `cantidad` de los préstamos ACTIVO del artículo (0 para no retornables).
-- `disponibles` = `stock_actual − prestados`.
-- Estado **ATRASADO** de un préstamo = `estado = ACTIVO` y `fecha_devolucion_esperada` < hoy. "Hoy" es la fecha **local** del servidor (no UTC): un préstamo que vence hoy no está atrasado hasta mañana.
+- `prestados` = suma de `cantidad` de los préstamos ACTIVO del artículo (0 para no retornables). Informativo: en un retornable, `stock_actual` ya es lo disponible para prestar.
 
 Las restricciones CHECK viven en la base además de la validación de los DTOs.
 
@@ -114,12 +114,12 @@ Las restricciones CHECK viven en la base además de la validación de los DTOs.
 | # | Regla | Entrega |
 |---|---|---|
 | R1 | `es_retornable` (el **uso** en la interfaz) se puede editar (incluso dejarlo sin definir) **mientras el artículo no tenga préstamos ni movimientos**; con historial, cambiarlo → 409. Reenviar el mismo valor no cuenta como cambio. *(Versión original: inmutable tras crear; relajada al agregar el formulario de edición.)* | 1 |
-| R2 | `stock_actual` no puede quedar por debajo de los `prestados` del artículo → 409. | 1 |
+| ~~R2~~ | Retirada: ya no existe relación que preservar entre `stock_actual` y `prestados`, porque prestar/devolver tocan `stock_actual` directamente (ver R4/R5 v2). | — |
 | R3 | Un artículo con préstamos o movimientos no se puede eliminar → 409. | 1 |
-| R4 | **Prestar:** solo retornables; `cantidad <= disponibles`; transacción con lock pesimista sobre el artículo; no toca `stock_actual`. | 2 |
-| R5 | **Devolver:** ACTIVO → DEVUELTO y guarda `fecha_devolucion_real`; no toca `stock_actual`. Devolver un préstamo ya devuelto → 409. | 2 |
+| R4 (v2) | **Prestar:** solo retornables (uso sin definir o consumible → 409); `cantidad <= stock_actual` (que ya es lo disponible); transacción con lock pesimista sobre el artículo; **resta** `cantidad` de `stock_actual`. Sin stock cargado (`null`) → 409. | 2 |
+| R5 (v2) | **Devolver:** ACTIVO → DEVUELTO, guarda `fecha_devolucion_real` y **suma** `cantidad` de vuelta a `stock_actual` (misma transacción, lock pesimista). Devolver un préstamo ya devuelto → 409. Un préstamo devuelto deja de listarse en `GET /prestamos` y pasa a figurar en `GET /movimientos` (tipo `DEVOLUCION`, combinado al leer con la tabla `movimientos`; no se inserta ahí). | 2 |
 | R6 | **Movimiento:** solo artículos con uso Consumible (`es_retornable = false`; `null` también se rechaza, pidiendo definir el uso primero); ENTRADA suma y SALIDA resta a `stock_actual` en la misma transacción con lock pesimista; si quedaría negativo → 409. Sin stock cargado (`null`) → 409. `cantidad` por defecto 1 (la acción "Usar 1" de Inicio no manda cantidad). **Implementado de forma adelantada** vía `POST /movimientos`, antes del resto de la entrega 2. | 1 (adelantado) |
-| R7 | Desde la entrega 2, el stock de un no retornable cambia **solo** por movimientos y `PATCH /articulos/:id` deja de aceptar `stockActual` para ellos. Todavía no implementado: el PATCH sigue aceptando `stockActual` para cualquier artículo (ajuste manual), y convive con `POST /movimientos`. El stock total de un retornable se sigue editando en el artículo (compra o baja de un equipo). | 1 → 2 |
+| R7 | *(Sin implementar, fuera de alcance de la entrega 2 a pedido del usuario — no relacionado con préstamos.)* Desde que existan movimientos, el stock de un no retornable debería cambiar **solo** por movimientos, y `PATCH /articulos/:id` dejar de aceptar `stockActual` para ellos. Hoy el PATCH sigue aceptando `stockActual` para cualquier artículo (ajuste manual), y convive con `POST /movimientos`. El stock de un retornable se sigue editando en el artículo igual (compra o baja de un equipo), eso no cambia. | pendiente |
 
 ## 6. API
 
@@ -130,12 +130,14 @@ Prefijo `/api`. CORS solo para `http://localhost:5173` y `http://127.0.0.1:5173`
 | Artículos | `GET /articulos`, `POST /articulos`, `GET /articulos/:id`, `PATCH /articulos/:id`, `DELETE /articulos/:id` | 1 |
 | Catálogo | `GET /catalogo` (categorías con sus tipos, ordenados; se lee de la base en cada pedido) | 1 |
 | Alertas | `GET /alertas/stock` | 1 |
-| Préstamos | `GET /prestamos`, `POST /prestamos`, `PATCH /prestamos/:id/devolver` (estado devuelto: ACTIVO / DEVUELTO / ATRASADO) | 2 |
-| Movimientos | `POST /movimientos` (implementado, R6). `GET /movimientos?articuloId=` pendiente. | 1 (parcial) / 2 |
+| Préstamos | `GET /prestamos` (solo ACTIVO), `POST /prestamos`, `PATCH /prestamos/:id/devolver` | 2 |
+| Movimientos | `POST /movimientos` (R6) y `GET /movimientos` (historial: movimientos + préstamos devueltos, combinados y ordenados por fecha) | 1 (parcial) / 2 |
 
-**Movimientos.** `CreateMovimientoDto`: `articuloId` (obligatorio), `tipo` (`ENTRADA` \| `SALIDA`, obligatorio), `cantidad` (opcional, entero ≥ 1, por defecto 1), `detalle` (opcional, texto). Devuelve el artículo actualizado (misma forma que `GET /articulos/:id`), para que la pantalla que llamó refresque stock y nivel sin pedirlo aparte.
+**Movimientos.** `CreateMovimientoDto`: `articuloId` (obligatorio), `tipo` (`ENTRADA` \| `SALIDA`, obligatorio), `cantidad` (opcional, entero ≥ 1, por defecto 1), `detalle` (opcional, texto). Devuelve el artículo actualizado (misma forma que `GET /articulos/:id`), para que la pantalla que llamó refresque stock y nivel sin pedirlo aparte. `GET /movimientos` no tiene DTO propio: junta `movimientos` con los `prestamos` en estado DEVUELTO (tipo `DEVOLUCION`, `detalle` = "Devuelto por «prestado_a»", `fecha` = `fecha_devolucion_real`) y devuelve todo ordenado por fecha descendente.
 
-**Artículos.** `GET /articulos` devuelve cada artículo con `prestados`, `disponibles` y `nivel` (`null` si no está en alerta; `BAJO` o `SIN_STOCK` según la sección 7), ordenado por el `orden` de la categoría en el catálogo y después por `nombre` (los que no tienen categoría, al final), e incluye `categoria` y `tipo` (nombres) junto con `categoriaId` y `tipoId`. `CreateArticuloDto`: solo `nombre` es obligatorio (texto no vacío, máx. 120, sin espacios de más; único junto con `modelo`, ver sección 2). `categoriaId` y `tipoId` (deben existir en el catálogo; el tipo debe pertenecer a la categoría y no se puede elegir un tipo sin categoría → 400), `marca` y `modelo` (máx. 80), `compatibilidad` y `paraQuienes` (máx. 255 cada uno; un texto vacío pasa a null), `esRetornable` (booleano), `stockActual` y `stockMinimo` (enteros >= 0) son opcionales y aceptan `null`, que significa "sin dato". `disponibles` es `null` si no hay stock actual. `UpdateArticuloDto` es el create parcial: todo se puede editar, con las reglas R1 y R2 (dejar el stock en `null` con unidades prestadas → 409).
+**Préstamos.** `CreatePrestamoDto`: `articuloId` (obligatorio), `cantidad` (opcional, entero ≥ 1, por defecto 1), `prestadoA` (obligatorio, texto). `POST /prestamos` aplica R4 (v2) y devuelve el préstamo creado con el artículo embebido (`id`, `nombre`, `marca`, `modelo`). `PATCH /prestamos/:id/devolver` no recibe body, aplica R5 (v2) y no devuelve contenido relevante (la pantalla vuelve a pedir `GET /prestamos`).
+
+**Artículos.** `GET /articulos` devuelve cada artículo con `prestados` y `nivel` (`null` si no está en alerta; `BAJO` o `SIN_STOCK` según la sección 7), ordenado por el `orden` de la categoría en el catálogo y después por `nombre` (los que no tienen categoría, al final), e incluye `categoria` y `tipo` (nombres) junto con `categoriaId` y `tipoId`. `CreateArticuloDto`: solo `nombre` es obligatorio (texto no vacío, máx. 120, sin espacios de más; único junto con `modelo`, ver sección 2). `categoriaId` y `tipoId` (deben existir en el catálogo; el tipo debe pertenecer a la categoría y no se puede elegir un tipo sin categoría → 400), `marca` y `modelo` (máx. 80), `compatibilidad` y `paraQuienes` (máx. 255 cada uno; un texto vacío pasa a null), `esRetornable` (booleano), `stockActual` y `stockMinimo` (enteros >= 0) son opcionales y aceptan `null`, que significa "sin dato". `UpdateArticuloDto` es el create parcial: todo se puede editar, con la regla R1.
 
 ## 7. Alertas de stock
 
@@ -145,7 +147,7 @@ Prefijo `/api`. CORS solo para `http://localhost:5173` y `http://127.0.0.1:5173`
 - `nivel` = `SIN_STOCK` si `stock_actual = 0`; si no, `BAJO`. (Con mínimo 0 y stock 0 también es `SIN_STOCK`.)
 - `faltante = stock_minimo − stock_actual` (0 si está justo en el mínimo). La cantidad a comprar la decide una persona.
 - Orden: `SIN_STOCK` primero, después mayor `faltante`, después `nombre` (comparación `es`).
-- Los retornables traen `prestados` y `disponibles` como contexto; la alerta sigue siendo sobre el total.
+- Los retornables traen `prestados` como contexto informativo; como `stock_actual` ya es lo disponible, un préstamo puede dejar a un retornable en alerta (ver decisión "Stock de retornables (v2)", sección 2).
 
 ```json
 {
@@ -155,7 +157,7 @@ Prefijo `/api`. CORS solo para `http://localhost:5173` y `http://127.0.0.1:5173`
     { "id": 5, "nombre": "Cable de red Cat6", "categoria": "Redes", "tipo": "Cable de red",
       "marca": null, "modelo": "Cat6", "compatibilidad": null, "esRetornable": false,
       "stockActual": 0, "stockMinimo": 10, "faltante": 10, "nivel": "SIN_STOCK",
-      "prestados": 0, "disponibles": 0 }
+      "prestados": 0 }
   ]
 }
 ```
@@ -170,14 +172,16 @@ La función pura `clasificarNivel(stockActual, stockMinimo)` devuelve `null`, `'
 
 - Barra lateral fija en `marino-950` (`#0A192F`) con "Informática" (y debajo el nombre del colegio) e ítems **Inicio**, **Artículos**, **Préstamos**, **Movimientos** (`NavLink`, ítem activo resaltado). Bajo el breakpoint `lg` pasa a una barra superior con menú desplegable.
 - Área de contenido blanca / gris muy claro con encabezado de página.
-- Rutas: `/` Inicio, `/articulos`, `/prestamos`, `/movimientos`. Las dos últimas muestran "Próximamente" en la entrega 1.
+- Rutas: `/` Inicio, `/articulos`, `/prestamos`, `/movimientos`. Las cuatro implementadas desde la entrega 2.
 - URL de la API desde `VITE_API_URL` (por defecto `http://localhost:3000/api`). `lib/api.js` envuelve `fetch`; `hooks/useApi.js` devuelve `{ data, error, loading, reload }`. TanStack Query se evalúa en la entrega 2, cuando haya mutaciones que refrescar.
 
 ### 8.2 Pantallas de la entrega 1
 
 - **Inicio:** una franja de resumen con 3 indicadores (**Artículos**, **En alerta**, **Sin stock**; en rojo suave cuando son > 0, neutros cuando son 0), debajo el cartel clickable "Registrar uso de stock" (`components/dashboard/UsarStockCard.jsx`) y después el panel `AlertasStock`, que es el protagonista de la pantalla.
 - **Registrar uso de stock (`components/articulos/UsarArticuloModal.jsx`):** el cartel abre una ventana modal con un buscador (filtra por nombre, modelo, compatibilidad o a quién le sirve, sin distinguir mayúsculas — escribir "Laura" encuentra el tóner que ella usa) y una lista de artículos con nombre, categoría/tipo, marca/modelo, a quién le sirve, stock actual y su insignia de nivel si está en alerta. Cada fila trae un botón **"Usar 1"** que llama a `POST /movimientos` (`tipo: SALIDA`) si el artículo es elegible (uso Consumible, stock cargado y mayor a 0); si no lo es, en vez del botón se explica el motivo (`lib/usarArticulo.js: elegibilidadParaUsar`, la misma regla que valida el servidor, para no ofrecer una acción que va a fallar). Al usar una unidad la lista se refresca sola, sin cerrar la ventana, para poder seguir procesando varios artículos seguidos; al cerrarla, Inicio vuelve a pedir `/articulos` y `/alertas/stock`.
-- **Artículos:** tabla con nombre (y debajo marca y modelo; la compatibilidad y a quién le sirve se ven al pasar el mouse), categoría (y debajo el tipo), **uso** (retornable / consumible), stock total, mínimo, prestados y disponibles. Las filas en alerta llevan la misma marca visual que en el panel. `<th scope="col">` en los encabezados. Lo que está vacío se muestra como "Sin categoría", "Sin definir" o "Sin dato", y el estado de un artículo sin stock o sin mínimo es "Sin dato de stock" (no genera alerta).
+- **Artículos:** tabla con nombre (y debajo marca y modelo; la compatibilidad y a quién le sirve se ven al pasar el mouse), categoría (y debajo el tipo), **uso** (retornable / consumible), stock (que en un retornable ya es lo disponible), mínimo y prestados (informativo, sin columna "disponibles"). Las filas en alerta llevan la misma marca visual que en el panel. `<th scope="col">` en los encabezados. Lo que está vacío se muestra como "Sin categoría", "Sin definir" o "Sin dato", y el estado de un artículo sin stock o sin mínimo es "Sin dato de stock" (no genera alerta).
+- **Préstamos:** tabla con solo los préstamos ACTIVO (artículo, a quién, fecha de salida, cantidad) y botón **Devolver** por fila (confirmación simple, sin campos). Botón "Nuevo préstamo" arriba abre una ventana con un select de artículos retornables con stock disponible > 0, cantidad (máximo el disponible) y a quién se le presta (texto libre). Al devolver, el préstamo desaparece de esta tabla y pasa a figurar en Movimientos.
+- **Movimientos:** tabla con todo el historial (fecha, artículo, tipo con insignia — Entrada / Salida / Devolución —, cantidad, detalle), más reciente primero, con buscador por artículo, modelo o detalle. Las devoluciones de préstamos aparecen mezcladas con las entradas y salidas de consumibles, con el detalle "Devuelto por «quién lo tenía»".
 - **Formulario de artículos:** botón "Nuevo artículo" arriba de la tabla y, en cada fila, acciones de editar y eliminar (solo con ícono, con nombre accesible). Alta y edición usan la misma ventana modal (`<dialog>` nativo) con nombre, **categoría** y **tipo** (listas desplegables leídas de `GET /catalogo` cada vez que se abre la ventana; el tipo depende de la categoría, queda deshabilitado sin categoría y se reinicia al cambiarla), marca, modelo, compatibilidad y a quién le sirve (los cuatro, texto libre), **uso** (sin definir / consumible / retornable), stock actual y stock mínimo. Los campos vacíos se guardan como `null`; los errores del servidor (nombre y modelo repetidos, uso con historial) se muestran dentro de la ventana (`components/ui/Aviso.jsx`, compartido con el modal de eliminar y el de registrar uso). El uso queda bloqueado si el artículo tiene unidades prestadas. Eliminar pide confirmación y el servidor lo frena si hay préstamos o movimientos (R3).
 - **Alertas y reporte de compra:** cada alerta muestra categoría y tipo, marca y modelo, la compatibilidad y a quién le sirve; el CSV suma las columnas Tipo, Marca, Modelo, Compatibilidad, "A quién le sirve" y Uso.
 - **Catálogo:** se edita con SQL, no desde la aplicación. `backend/sql/catalogo-inicial.sql` (idempotente, también lo carga `npm run catalogo`) y `backend/sql/catalogo-editar.sql` (recetario de consultas). Ambos archivos declaran `SET client_encoding = 'UTF8'` para que las tildes no se rompan al correrlos con `psql` en Windows.
@@ -227,13 +231,13 @@ La función pura `clasificarNivel(stockActual, stockMinimo)` devuelve `null`, `'
 - `.env` (fuera de git; `.env.example` sí va): `DB_HOST=localhost`, `DB_PORT=5432`, `DB_USER=postgres`, `DB_PASSWORD=...`, `DB_NAME=InventarioInformatica`, `PORT=3000`. Nombre de base y usuario elegidos por el usuario. Las variables ya definidas en el entorno del proceso tienen prioridad sobre el archivo.
 - `@nestjs/config` global; `TypeOrmModule.forRootAsync` con `autoLoadEntities: true` y `synchronize: process.env.NODE_ENV !== 'production'`. Cada módulo registra su entidad con `forFeature`.
 - Tests e2e: con `NODE_ENV=test` el config lee primero `.env.test` (versionado, sin claves, solo `DB_NAME=InventarioInformatica_test`) y después `.env` para host, usuario y clave. Antes de borrar datos, los tests verifican que el nombre de la base termine en `_test`.
-- **Seed** (`npm run seed`): solo corre si `articulos` está vacía (nunca pisa datos). Carga 10 artículos y 2 préstamos ACTIVO de ejemplo (uno vencido ayer, otro a varios días):
+- **Seed** (`npm run seed`): solo corre si `articulos` está vacía (nunca pisa datos). Carga 10 artículos y 2 préstamos ACTIVO de ejemplo. En los retornables, el stock de ejemplo ya viene con lo prestado restado (`stock_actual` es lo disponible):
 
   | Artículo | Categoría | Tipo | Stock / Mín. | Nivel esperado |
   |---|---|---|---|---|
-  | Proyector Epson EB-X06 | Equipos | retornable | 4 / 2 | ok (1 prestado) |
+  | Proyector Epson EB-X06 | Equipos | retornable | 3 / 2 | ok (1 prestado, ya restado) |
   | Notebook Lenovo ThinkPad | Equipos | retornable | 6 / 2 | ok |
-  | Parlante portátil | Equipos | retornable | 1 / 1 | BAJO, faltante 0 (1 prestado, 0 disponibles) |
+  | Parlante portátil | Equipos | retornable | 0 / 1 | SIN_STOCK, faltante 1 (1 prestado, ya restado) |
   | Cable HDMI 2 m | Cables | consumible | 3 / 5 | BAJO, faltante 2 |
   | Cable de red Cat6 | Cables | consumible | 0 / 10 | SIN_STOCK, faltante 10 |
   | Pilas AA | Insumos | consumible | 12 / 10 | ok |
@@ -245,20 +249,20 @@ La función pura `clasificarNivel(stockActual, stockMinimo)` devuelve `null`, `'
 ## 10. Testing
 
 - **Unitarios (Jest, viene con Nest):** `clasificarNivel` en sus bordes (stock > mínimo → `null`; stock = mínimo → `BAJO`; stock = 0 → `SIN_STOCK`; mínimo 0 con stock 0 → `SIN_STOCK`; mínimo 0 con stock 1 → `null`). `AlertasService`: orden, `faltante` y `resumen` con un `ArticulosService` simulado.
-- **E2E contra `InventarioInformatica_test`:** `GET /api/alertas/stock` con datos cargados por repositorio; `prestados` y `disponibles` correctos en `GET /api/articulos` y en alertas con un préstamo ACTIVO insertado directamente; `PATCH` con `stockActual` menor a lo prestado → 409 (R2); `DELETE` de un artículo con préstamo → 409 (R3); `PATCH` con `esRetornable` → 400 (R1).
+- **E2E contra `InventarioInformatica_test`:** `GET /api/alertas/stock` con datos cargados por repositorio; `prestados` correcto en `GET /api/articulos` y en alertas con un préstamo ACTIVO insertado directamente; `DELETE` de un artículo con préstamo → 409 (R3); `PATCH` con `esRetornable` → 400 (R1); prestar resta y devolver suma `stock_actual` (R4/R5 v2), con sus 409 (sin disponible, ya devuelto); `GET /movimientos` incluye las devoluciones mezcladas con los movimientos.
 - **Frontend:** Vitest solo para las funciones puras (armado del CSV con su escapado, y el porcentaje de la barra de stock). Las pantallas no llevan tests automáticos, igual que `sanjoActivities`: se verifican levantando ambas apps con el seed.
 
 ## 11. Alcance
 
 **Entrega 1 (este spec):** proyecto Nest conectado al Postgres local; las 3 entidades; CRUD de Artículos; `GET /alertas/stock`; seed; frontend con layout, Inicio + Alertas, y Artículos; `readme.md` actualizado (sin Docker, nombre real de la carpeta, pasos de puesta en marcha).
 
-**Entrega 2 (spec y plan propios):** endpoints y pantallas de Préstamos y Movimientos con las reglas R4–R7. `POST /movimientos` (R6) ya está hecho, adelantado para la acción "Usar 1" de Inicio; falta `GET /movimientos`, la pantalla de historial y R7.
+**Entrega 2 (completa):** endpoints y pantallas de Préstamos y Movimientos, con las reglas R4 (v2), R5 (v2) y R6. R7 queda pendiente, fuera de alcance por decisión del usuario (no tiene que ver con préstamos).
 
-**Criterios de aceptación de la entrega 1:**
+**Criterios de aceptación de la entrega 1 (histórico, con los números de seed vigentes en su momento):**
 1. `npm run start:dev` conecta con el Postgres local y crea las 3 tablas.
 2. `npm run seed` carga los 10 artículos y 2 préstamos.
-3. `GET /api/alertas/stock` devuelve 5 ítems (1 `SIN_STOCK`, 4 `BAJO`) en este orden: Cable de red Cat6, Cable HDMI 2 m, Pilas AAA, Teclado USB, Parlante portátil.
-4. En `http://localhost:5173` Inicio muestra KPIs 10 / 5 / 1 y el panel con las 5 alertas marcadas; Artículos muestra la tabla con `prestados` y `disponibles`; el CSV descargado abre en Excel con columnas y acentos correctos.
+3. `GET /api/alertas/stock` devuelve 5 ítems en este orden: Cable de red Cat6, Parlante portátil, Cable HDMI 2 m, Pilas AAA, Teclado USB (2 `SIN_STOCK`, 3 `BAJO` desde la decisión "Stock de retornables (v2)", sección 2).
+4. En `http://localhost:5173` Inicio muestra KPIs 10 / 5 / 2 y el panel con las 5 alertas marcadas; Artículos muestra la tabla con `prestados`; el CSV descargado abre en Excel con columnas y acentos correctos.
 5. Tests unitarios y e2e pasan.
 
 **Fuera de alcance (por ahora):** autenticación y roles (corre local, en la PC del departamento), tabla de personas, migraciones, Docker, despliegue, notificaciones por mail.
