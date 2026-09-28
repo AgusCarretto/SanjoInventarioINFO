@@ -25,6 +25,11 @@ function FilaAlerta({ item }) {
             Compatible con {item.compatibilidad}
           </p>
         )}
+        {item.paraQuienes && (
+          <p className="text-sm text-slate-600" title={item.paraQuienes}>
+            Para {item.paraQuienes}
+          </p>
+        )}
         {item.esRetornable && (
           <p className="text-sm text-slate-600">
             {plural(item.prestados, 'prestado', 'prestados')} y {plural(item.disponibles, 'disponible', 'disponibles')}

@@ -8,6 +8,7 @@ const vacio = {
   marca: '',
   modelo: '',
   compatibilidad: '',
+  paraQuienes: '',
   uso: '',
   stockActual: '',
   stockMinimo: '',
@@ -26,6 +27,7 @@ describe('valoresIniciales', () => {
       marca: null,
       modelo: null,
       compatibilidad: null,
+      paraQuienes: null,
       esRetornable: null,
       stockActual: null,
       stockMinimo: null,
@@ -41,6 +43,7 @@ describe('valoresIniciales', () => {
       marca: 'HP',
       modelo: '26A',
       compatibilidad: 'LaserJet Pro M402',
+      paraQuienes: 'Laura, Secretaría',
       esRetornable: false,
       stockActual: 4,
       stockMinimo: 2,
@@ -52,6 +55,7 @@ describe('valoresIniciales', () => {
       marca: 'HP',
       modelo: '26A',
       compatibilidad: 'LaserJet Pro M402',
+      paraQuienes: 'Laura, Secretaría',
       uso: 'consumible',
       stockActual: '4',
       stockMinimo: '2',
@@ -75,33 +79,44 @@ describe('armarPayload', () => {
       marca: null,
       modelo: null,
       compatibilidad: null,
+      paraQuienes: null,
       esRetornable: null,
       stockActual: null,
       stockMinimo: null,
     });
   });
 
-  it('recorta espacios de nombre, marca, modelo y compatibilidad', () => {
+  it('recorta espacios de nombre, marca, modelo, compatibilidad y a quién le sirve', () => {
     const payload = armarPayload({
       ...vacio,
       nombre: '  Mouse USB ',
       marca: '  Logitech ',
       modelo: ' M90 ',
       compatibilidad: '  Windows y Mac ',
+      paraQuienes: '  Laura, Secretaría ',
     });
     expect(payload).toMatchObject({
       nombre: 'Mouse USB',
       marca: 'Logitech',
       modelo: 'M90',
       compatibilidad: 'Windows y Mac',
+      paraQuienes: 'Laura, Secretaría',
     });
   });
 
   it('los textos opcionales de solo espacios pasan a null', () => {
-    const payload = armarPayload({ ...vacio, nombre: 'X', marca: '   ', modelo: '  ', compatibilidad: ' ' });
+    const payload = armarPayload({
+      ...vacio,
+      nombre: 'X',
+      marca: '   ',
+      modelo: '  ',
+      compatibilidad: ' ',
+      paraQuienes: '  ',
+    });
     expect(payload.marca).toBeNull();
     expect(payload.modelo).toBeNull();
     expect(payload.compatibilidad).toBeNull();
+    expect(payload.paraQuienes).toBeNull();
   });
 
   it('convierte la categoría y el tipo elegidos a número', () => {

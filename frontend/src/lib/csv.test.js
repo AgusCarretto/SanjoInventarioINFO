@@ -8,6 +8,7 @@ const item = (extra = {}) => ({
   marca: null,
   modelo: null,
   compatibilidad: null,
+  paraQuienes: null,
   esRetornable: false,
   stockActual: 3,
   stockMinimo: 5,
@@ -16,16 +17,17 @@ const item = (extra = {}) => ({
   ...extra,
 });
 
-const ENCABEZADO = 'Artículo;Categoría;Tipo;Marca;Modelo;Compatibilidad;Uso;Stock actual;Stock mínimo;Faltante;Nivel';
+const ENCABEZADO =
+  'Artículo;Categoría;Tipo;Marca;Modelo;Compatibilidad;A quién le sirve;Uso;Stock actual;Stock mínimo;Faltante;Nivel';
 
 describe('armarCsvReporteCompra', () => {
   it('arma encabezado y filas con ; y saltos CRLF', () => {
     expect(armarCsvReporteCompra([item()])).toBe(
-      `${ENCABEZADO}\r\nCable HDMI 2 m;Otros;Cable de video;;;;Consumible;3;5;2;Stock bajo`,
+      `${ENCABEZADO}\r\nCable HDMI 2 m;Otros;Cable de video;;;;;Consumible;3;5;2;Stock bajo`,
     );
   });
 
-  it('incluye tipo, marca, modelo y compatibilidad para saber qué comprar', () => {
+  it('incluye tipo, marca, modelo, compatibilidad y a quién le sirve para saber qué comprar', () => {
     const csv = armarCsvReporteCompra([
       item({
         nombre: 'Tóner HP 26A',
@@ -34,9 +36,10 @@ describe('armarCsvReporteCompra', () => {
         marca: 'HP',
         modelo: '26A',
         compatibilidad: 'LaserJet Pro M402',
+        paraQuienes: 'Laura, Secretaría',
       }),
     ]);
-    expect(csv).toContain('Tóner HP 26A;Impresoras;Tóner;HP;26A;LaserJet Pro M402;Consumible');
+    expect(csv).toContain('Tóner HP 26A;Impresoras;Tóner;HP;26A;LaserJet Pro M402;Laura, Secretaría;Consumible');
   });
 
   it('traduce el uso y el nivel', () => {
@@ -49,15 +52,16 @@ describe('armarCsvReporteCompra', () => {
 
   it('un uso sin definir queda como celda vacía', () => {
     const fila = armarCsvReporteCompra([item({ esRetornable: null })]).split('\r\n')[1].split(';');
-    expect(fila[6]).toBe('');
+    expect(fila[7]).toBe('');
   });
 
   it('escapa punto y coma y comillas', () => {
     const csv = armarCsvReporteCompra([
-      item({ nombre: 'Cable "HDMI"; 2 m', compatibilidad: 'M402; M426' }),
+      item({ nombre: 'Cable "HDMI"; 2 m', compatibilidad: 'M402; M426', paraQuienes: 'Laura; Juan' }),
     ]);
     expect(csv).toContain('"Cable ""HDMI""; 2 m"');
     expect(csv).toContain('"M402; M426"');
+    expect(csv).toContain('"Laura; Juan"');
   });
 
   it('sin ítems devuelve solo el encabezado', () => {

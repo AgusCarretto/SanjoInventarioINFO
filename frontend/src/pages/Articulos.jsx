@@ -49,6 +49,12 @@ function FilaArticulo({ articulo, alEditar, alEliminar }) {
   const estilo = NIVELES[articulo.nivel];
   const retornable = articulo.esRetornable === true;
   const marcaModelo = [articulo.marca, articulo.modelo].filter(Boolean).join(' ');
+  const detalle = [
+    articulo.compatibilidad && `Compatible con: ${articulo.compatibilidad}`,
+    articulo.paraQuienes && `A quién le sirve: ${articulo.paraQuienes}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
   let uso = <SinDato texto="Sin definir" />;
   if (articulo.esRetornable !== null) uso = articulo.esRetornable ? 'Retornable' : 'Consumible';
 
@@ -56,7 +62,7 @@ function FilaArticulo({ articulo, alEditar, alEliminar }) {
     <tr className={estilo?.fila ?? ''}>
       <td
         className={`min-w-44 px-3 py-3 ${estilo?.borde ?? 'border-l-4 border-transparent'}`}
-        title={articulo.compatibilidad ? `Compatible con: ${articulo.compatibilidad}` : undefined}
+        title={detalle || undefined}
       >
         <p className="font-medium text-marino-900">{articulo.nombre}</p>
         {marcaModelo && <p className="text-slate-600">{marcaModelo}</p>}

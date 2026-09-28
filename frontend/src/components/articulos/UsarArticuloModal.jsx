@@ -22,6 +22,7 @@ function FilaArticuloUsar({ articulo, procesando, error, alUsar }) {
           <p className="truncate font-semibold text-marino-900">{articulo.nombre}</p>
           {clasificacion && <p className="text-sm text-slate-600">{clasificacion}</p>}
           {marcaModelo && <p className="text-sm text-slate-600">{marcaModelo}</p>}
+          {articulo.paraQuienes && <p className="text-sm text-slate-600">Para {articulo.paraQuienes}</p>}
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
@@ -126,7 +127,7 @@ export default function UsarArticuloModal({ alCerrar }) {
     <Dialogo titulo="Registrar uso de stock" alCerrar={alCerrar} ancho="ancho">
       <div className="border-b border-slate-200 px-5 py-4">
         <label htmlFor="usar-filtro" className="mb-1 block text-sm font-medium text-marino-900">
-          Buscar por nombre, modelo o compatibilidad
+          Buscar por nombre, modelo, compatibilidad o a quién le sirve
         </label>
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
@@ -136,7 +137,7 @@ export default function UsarArticuloModal({ alCerrar }) {
             type="text"
             value={filtro}
             onChange={(evento) => setFiltro(evento.target.value)}
-            placeholder="Ej: tóner, 26A, LaserJet…"
+            placeholder="Ej: tóner, 26A, LaserJet, Laura…"
             autoComplete="off"
             className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-marino-900 placeholder:text-slate-400 focus-visible:border-marino-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marino-600/30"
           />

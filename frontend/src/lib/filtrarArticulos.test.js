@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { filtrarArticulos } from './filtrarArticulos.js';
 
 const lista = [
-  { id: 1, nombre: 'Tóner HP', modelo: '26A', compatibilidad: 'LaserJet Pro M402' },
-  { id: 2, nombre: 'Tóner Epson', modelo: '664', compatibilidad: 'L355, L365' },
-  { id: 3, nombre: 'Mouse USB', modelo: null, compatibilidad: null },
+  { id: 1, nombre: 'Tóner HP', modelo: '26A', compatibilidad: 'LaserJet Pro M402', paraQuienes: 'Laura, Secretaría' },
+  { id: 2, nombre: 'Tóner Epson', modelo: '664', compatibilidad: 'L355, L365', paraQuienes: 'Dirección' },
+  { id: 3, nombre: 'Mouse USB', modelo: null, compatibilidad: null, paraQuienes: null },
 ];
 
 describe('filtrarArticulos', () => {
@@ -26,7 +26,12 @@ describe('filtrarArticulos', () => {
     expect(filtrarArticulos(lista, 'l365').map((a) => a.id)).toEqual([2]);
   });
 
-  it('no falla con artículos que tienen modelo o compatibilidad en null', () => {
+  it('busca por a quién le sirve (ej. el nombre de una persona)', () => {
+    expect(filtrarArticulos(lista, 'laura').map((a) => a.id)).toEqual([1]);
+    expect(filtrarArticulos(lista, 'dirección').map((a) => a.id)).toEqual([2]);
+  });
+
+  it('no falla con artículos que tienen modelo, compatibilidad o a quién le sirve en null', () => {
     expect(filtrarArticulos(lista, 'usb').map((a) => a.id)).toEqual([3]);
   });
 

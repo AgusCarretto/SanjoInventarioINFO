@@ -179,6 +179,24 @@ export default function FormularioArticulo({ articulo, alGuardar, alCerrar }) {
           </Campo>
 
           <Campo
+            id="articulo-para-quienes"
+            etiqueta="A quién le sirve"
+            ayuda="Nombres de las personas que lo usan, separados por coma. También se puede buscar por acá."
+          >
+            <input
+              id="articulo-para-quienes"
+              type="text"
+              value={valores.paraQuienes}
+              onChange={cambiar('paraQuienes')}
+              placeholder="Ej: Laura, Secretaría"
+              maxLength={255}
+              autoComplete="off"
+              aria-describedby="articulo-para-quienes-ayuda"
+              className={CLASE_CAMPO}
+            />
+          </Campo>
+
+          <Campo
             id="articulo-uso"
             etiqueta="Uso"
             ayuda={
