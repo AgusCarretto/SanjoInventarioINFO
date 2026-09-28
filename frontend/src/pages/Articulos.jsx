@@ -75,9 +75,6 @@ function FilaArticulo({ articulo, alEditar, alEliminar }) {
       <td className={`${COLUMNA_NUMERICA} font-semibold text-marino-900`}>{articulo.stockActual ?? <SinDato />}</td>
       <td className={`${COLUMNA_NUMERICA} text-slate-700`}>{articulo.stockMinimo ?? <SinDato />}</td>
       <td className={`${COLUMNA_NUMERICA} text-slate-700`}>{retornable ? articulo.prestados : <NoAplica />}</td>
-      <td className={`${COLUMNA_NUMERICA} text-slate-700`}>
-        {retornable ? (articulo.disponibles ?? <SinDato />) : <NoAplica />}
-      </td>
       <td className="whitespace-nowrap px-3 py-3">
         <EstadoArticulo articulo={articulo} />
       </td>
@@ -145,7 +142,6 @@ export default function Articulos() {
               <th scope="col" className="px-3 py-3 text-right">Stock</th>
               <th scope="col" className="px-3 py-3 text-right">Mínimo</th>
               <th scope="col" className="px-3 py-3 text-right">Prestados</th>
-              <th scope="col" className="px-3 py-3 text-right">Disponibles</th>
               <th scope="col" className="px-3 py-3">Estado</th>
               <th scope="col" className="px-3 py-3">
                 <span className="sr-only">Acciones</span>
@@ -171,7 +167,7 @@ export default function Articulos() {
     <>
       <PageHeader
         titulo="Artículos"
-        descripcion="Stock total del colegio, lo que está prestado y lo que queda disponible."
+        descripcion="Stock disponible de cada artículo y lo que está prestado."
         acciones={
           <button
             type="button"

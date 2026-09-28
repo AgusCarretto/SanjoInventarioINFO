@@ -30,10 +30,8 @@ function FilaAlerta({ item }) {
             Para {item.paraQuienes}
           </p>
         )}
-        {item.esRetornable && (
-          <p className="text-sm text-slate-600">
-            {plural(item.prestados, 'prestado', 'prestados')} y {plural(item.disponibles, 'disponible', 'disponibles')}
-          </p>
+        {item.esRetornable && item.prestados > 0 && (
+          <p className="text-sm text-slate-600">{plural(item.prestados, 'prestado', 'prestados')}</p>
         )}
       </div>
 

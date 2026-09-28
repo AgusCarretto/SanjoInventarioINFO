@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowDownCircle, ArrowUpCircle, Search } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, RotateCcw, Search } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import ErrorConexion from '../components/ui/ErrorConexion.jsx';
 import { useApi } from '../hooks/useApi.js';
@@ -8,14 +8,18 @@ function SinDato() {
   return <span className="text-slate-500">—</span>;
 }
 
+const TIPOS = {
+  ENTRADA: { Icono: ArrowDownCircle, clase: 'bg-emerald-100 text-emerald-800', etiqueta: 'Entrada' },
+  SALIDA: { Icono: ArrowUpCircle, clase: 'bg-amber-100 text-amber-800', etiqueta: 'Salida' },
+  DEVOLUCION: { Icono: RotateCcw, clase: 'bg-marino-100 text-marino-800', etiqueta: 'Devolución' },
+};
+
 function BadgeTipo({ tipo }) {
-  const esEntrada = tipo === 'ENTRADA';
-  const Icono = esEntrada ? ArrowDownCircle : ArrowUpCircle;
-  const clase = esEntrada ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800';
+  const { Icono, clase, etiqueta } = TIPOS[tipo];
   return (
     <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-semibold ${clase}`}>
       <Icono className="size-3.5" aria-hidden="true" />
-      {esEntrada ? 'Entrada' : 'Salida'}
+      {etiqueta}
     </span>
   );
 }
