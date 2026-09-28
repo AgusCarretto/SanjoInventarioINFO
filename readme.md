@@ -40,7 +40,7 @@ Node 24 y PostgreSQL 18 corriendo en `localhost:5432`.
 
    ```powershell
    npm install
-   copy .env.example .env      # completar DB_PASSWORD con la clave del usuario postgres
+   copy .env.example .env      # completar DB_PASSWORD y SESSION_SECRET (una clave larga cualquiera)
    npm run catalogo            # carga las categorías y tipos de las listas desplegables
    npm run seed                # opcional: carga 10 artículos y 2 préstamos de ejemplo
    npm run start:dev           # http://localhost:3000/api
@@ -56,6 +56,12 @@ Node 24 y PostgreSQL 18 corriendo en `localhost:5432`.
    ```
 
    Si el backend no está en `http://localhost:3000/api`, copiar `.env.example` a `.env` y ajustar `VITE_API_URL`.
+
+## Login
+
+Para entrar hace falta usuario y contraseña. Es un login simple, sin alta de cuentas ni recuperación de contraseña: solo 2 usuarios fijos del departamento (`agus` y `seba`), definidos con la contraseña ya hasheada en `backend/src/auth/usuarios.ts` — para agregar o cambiar uno, se genera el hash y se edita ese archivo a mano. La sesión dura 30 días; "Cerrar sesión" está al pie de la barra lateral.
+
+Pensado para esta PC sin acceso de red: si en algún momento se abre a otras PCs del departamento, conviene cambiar esas dos contraseñas por unas menos obvias.
 
 ## Uso diario (esta PC, siempre prendido)
 
