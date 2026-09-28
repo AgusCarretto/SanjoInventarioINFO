@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { CircleCheck, CircleHelp, Pencil, Plus, Trash2 } from 'lucide-react';
+import { CircleCheck, CircleHelp, Download, Pencil, Plus, Trash2 } from 'lucide-react';
 import ConfirmarEliminar from '../components/articulos/ConfirmarEliminar.jsx';
 import FormularioArticulo from '../components/articulos/FormularioArticulo.jsx';
 import PageHeader from '../components/layout/PageHeader.jsx';
 import ErrorConexion from '../components/ui/ErrorConexion.jsx';
 import NivelBadge from '../components/ui/NivelBadge.jsx';
 import { useApi } from '../hooks/useApi.js';
+import { armarCsvBackupArticulos, descargarCsv, nombreArchivoBackup } from '../lib/csv.js';
 import { NIVELES } from '../lib/nivelEstilos.js';
 
 // tabular-nums solo en columnas de números, para que se alineen en vertical.
@@ -169,14 +170,26 @@ export default function Articulos() {
         titulo="Artículos"
         descripcion="Stock disponible de cada artículo y lo que está prestado."
         acciones={
-          <button
-            type="button"
-            onClick={() => setDialogo({ tipo: 'formulario', articulo: null })}
-            className="inline-flex items-center gap-2 rounded-lg bg-marino-950 px-3.5 py-2 text-sm font-medium text-white hover:bg-marino-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marino-600 focus-visible:ring-offset-2"
-          >
-            <Plus className="size-4" aria-hidden="true" />
-            Nuevo artículo
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={loading || Boolean(error) || (data?.length ?? 0) === 0}
+              onClick={() => descargarCsv(nombreArchivoBackup(), armarCsvBackupArticulos(data))}
+              title="Descarga un CSV con todos los artículos y su stock, para guardar aparte"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-marino-900 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marino-600 disabled:cursor-not-allowed disabled:text-slate-400"
+            >
+              <Download className="size-4" aria-hidden="true" />
+              Backup
+            </button>
+            <button
+              type="button"
+              onClick={() => setDialogo({ tipo: 'formulario', articulo: null })}
+              className="inline-flex items-center gap-2 rounded-lg bg-marino-950 px-3.5 py-2 text-sm font-medium text-white hover:bg-marino-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marino-600 focus-visible:ring-offset-2"
+            >
+              <Plus className="size-4" aria-hidden="true" />
+              Nuevo artículo
+            </button>
+          </div>
         }
       />
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">{cuerpo}</div>

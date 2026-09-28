@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { OctagonAlert, Package, TriangleAlert } from 'lucide-react';
+import ReponerArticuloModal from '../components/articulos/ReponerArticuloModal.jsx';
 import UsarArticuloModal from '../components/articulos/UsarArticuloModal.jsx';
 import AlertasStock from '../components/dashboard/AlertasStock.jsx';
+import ReponerStockCard from '../components/dashboard/ReponerStockCard.jsx';
 import StatCard from '../components/dashboard/StatCard.jsx';
 import UsarStockCard from '../components/dashboard/UsarStockCard.jsx';
 import PageHeader from '../components/layout/PageHeader.jsx';
@@ -12,10 +14,16 @@ export default function Inicio() {
   const articulos = useApi('/articulos');
   const resumen = alertas.data?.resumen;
   const [modalUsarAbierto, setModalUsarAbierto] = useState(false);
+  const [modalReponerAbierto, setModalReponerAbierto] = useState(false);
 
-  // Usar stock puede cambiar qué artículos están en alerta: se refresca todo al cerrar.
+  // Usar y reponer stock pueden cambiar qué artículos están en alerta: se refresca todo al cerrar.
   const cerrarModalUsar = () => {
     setModalUsarAbierto(false);
+    alertas.reload();
+    articulos.reload();
+  };
+  const cerrarModalReponer = () => {
+    setModalReponerAbierto(false);
     alertas.reload();
     articulos.reload();
   };
@@ -40,8 +48,9 @@ export default function Inicio() {
           cargando={alertas.loading}
         />
       </div>
-      <div className="mt-6">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <UsarStockCard onClick={() => setModalUsarAbierto(true)} />
+        <ReponerStockCard onClick={() => setModalReponerAbierto(true)} />
       </div>
       <div className="mt-6">
         <AlertasStock
@@ -53,6 +62,7 @@ export default function Inicio() {
       </div>
 
       {modalUsarAbierto && <UsarArticuloModal alCerrar={cerrarModalUsar} />}
+      {modalReponerAbierto && <ReponerArticuloModal alCerrar={cerrarModalReponer} />}
     </>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { armarCsvReporteCompra, nombreArchivoReporte } from './csv.js';
+import { armarCsvBackupArticulos, armarCsvReporteCompra, nombreArchivoBackup, nombreArchivoReporte } from './csv.js';
 
 const item = (extra = {}) => ({
   nombre: 'Cable HDMI 2 m',
@@ -72,5 +72,21 @@ describe('armarCsvReporteCompra', () => {
 describe('nombreArchivoReporte', () => {
   it('usa la fecha local con ceros', () => {
     expect(nombreArchivoReporte(new Date(2026, 8, 5))).toBe('reporte-compra-2026-09-05.csv');
+  });
+});
+
+describe('armarCsvBackupArticulos', () => {
+  it('incluye todos los artículos, sin faltante ni nivel', () => {
+    const csv = armarCsvBackupArticulos([item(), item({ nombre: 'Mouse', esRetornable: null, stockActual: null })]);
+    const filas = csv.split('\r\n');
+    expect(filas[0]).toBe('Artículo;Categoría;Tipo;Marca;Modelo;Compatibilidad;A quién le sirve;Uso;Stock actual;Stock mínimo');
+    expect(filas).toHaveLength(3);
+    expect(filas[2]).toBe('Mouse;Otros;Cable de video;;;;;;;5');
+  });
+});
+
+describe('nombreArchivoBackup', () => {
+  it('usa la fecha local con ceros', () => {
+    expect(nombreArchivoBackup(new Date(2026, 8, 5))).toBe('backup-articulos-2026-09-05.csv');
   });
 });

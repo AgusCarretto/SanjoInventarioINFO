@@ -47,11 +47,49 @@ export function armarCsvReporteCompra(items) {
   return [COLUMNAS, ...filas].map((fila) => fila.map(celda).join(';')).join('\r\n');
 }
 
-export function nombreArchivoReporte(fecha = new Date()) {
+function fechaArchivo(fecha) {
   const anio = fecha.getFullYear();
   const mes = String(fecha.getMonth() + 1).padStart(2, '0');
   const dia = String(fecha.getDate()).padStart(2, '0');
-  return `reporte-compra-${anio}-${mes}-${dia}.csv`;
+  return `${anio}-${mes}-${dia}`;
+}
+
+export function nombreArchivoReporte(fecha = new Date()) {
+  return `reporte-compra-${fechaArchivo(fecha)}.csv`;
+}
+
+const COLUMNAS_BACKUP = [
+  'Artículo',
+  'Categoría',
+  'Tipo',
+  'Marca',
+  'Modelo',
+  'Compatibilidad',
+  'A quién le sirve',
+  'Uso',
+  'Stock actual',
+  'Stock mínimo',
+];
+
+/** Backup manual: todos los artículos con su stock actual, no solo los que están en alerta. */
+export function armarCsvBackupArticulos(items) {
+  const filas = items.map((i) => [
+    i.nombre,
+    i.categoria,
+    i.tipo,
+    i.marca,
+    i.modelo,
+    i.compatibilidad,
+    i.paraQuienes,
+    textoUso(i.esRetornable),
+    i.stockActual,
+    i.stockMinimo,
+  ]);
+  return [COLUMNAS_BACKUP, ...filas].map((fila) => fila.map(celda).join(';')).join('\r\n');
+}
+
+export function nombreArchivoBackup(fecha = new Date()) {
+  return `backup-articulos-${fechaArchivo(fecha)}.csv`;
 }
 
 /** El BOM UTF-8 hace que Excel muestre bien los acentos. */
