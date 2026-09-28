@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { ArrowLeftRight, HandHelping, LayoutDashboard, Menu, Package, X } from 'lucide-react';
+import { ArrowLeftRight, HandHelping, LayoutDashboard, LogOut, Menu, Package, X } from 'lucide-react';
+import { apiSend } from '../../lib/api.js';
 
 const ITEMS = [
   { to: '/', etiqueta: 'Inicio', Icono: LayoutDashboard, end: true },
@@ -36,6 +37,14 @@ function Navegacion({ alNavegar }) {
   );
 }
 
+const CLASE_SALIR =
+  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-marino-200 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white';
+
+async function cerrarSesion() {
+  await apiSend('POST', '/auth/logout').catch(() => {});
+  window.location.reload();
+}
+
 export default function Sidebar() {
   const [abierto, setAbierto] = useState(false);
 
@@ -44,6 +53,10 @@ export default function Sidebar() {
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col gap-8 bg-marino-950 px-4 py-6 lg:flex">
         <Marca />
         <Navegacion />
+        <button type="button" onClick={cerrarSesion} className={`${CLASE_SALIR} mt-auto`}>
+          <LogOut className="size-5" aria-hidden="true" />
+          Cerrar sesión
+        </button>
       </aside>
 
       <header className="sticky top-0 z-20 bg-marino-950 px-4 py-3 lg:hidden">
@@ -63,6 +76,10 @@ export default function Sidebar() {
         {abierto && (
           <div id="menu-movil" className="mt-3 border-t border-white/10 pt-3">
             <Navegacion alNavegar={() => setAbierto(false)} />
+            <button type="button" onClick={cerrarSesion} className={CLASE_SALIR}>
+              <LogOut className="size-5" aria-hidden="true" />
+              Cerrar sesión
+            </button>
           </div>
         )}
       </header>
