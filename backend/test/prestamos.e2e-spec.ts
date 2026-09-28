@@ -1,12 +1,13 @@
 import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
-import { crearApp, crearArticulo, crearPrestamo, limpiarBase } from './helpers.js';
+import { crearApp, crearArticulo, crearPrestamo, limpiarBase, loguearAgente } from './helpers.js';
 
 describe('Préstamos (e2e)', () => {
   let app: INestApplication;
+  let agente: Awaited<ReturnType<typeof loguearAgente>>;
 
   beforeAll(async () => {
     app = await crearApp();
+    agente = await loguearAgente(app);
   });
   beforeEach(async () => {
     await limpiarBase(app);
@@ -15,12 +16,9 @@ describe('Préstamos (e2e)', () => {
     await app.close();
   });
 
-  const post = (cuerpo: object) =>
-    request(app.getHttpServer()).post('/api/prestamos').send(cuerpo);
-  const devolver = (id: number) =>
-    request(app.getHttpServer()).patch(`/api/prestamos/${id}/devolver`);
-  const articulo = (id: number) =>
-    request(app.getHttpServer()).get(`/api/articulos/${id}`);
+  const post = (cuerpo: object) => agente.post('/api/prestamos').send(cuerpo);
+  const devolver = (id: number) => agente.patch(`/api/prestamos/${id}/devolver`);
+  const articulo = (id: number) => agente.get(`/api/articulos/${id}`);
 
   it('presta y resta del stock disponible', async () => {
     const a = await crearArticulo(app, { nombre: 'Proyector', esRetornable: true, stockActual: 4 });
@@ -48,7 +46,7 @@ describe('Préstamos (e2e)', () => {
     const a = await crearArticulo(app, { nombre: 'Proyector', esRetornable: true, stockActual: 2 });
     const activo = await crearPrestamo(app, { articuloId: a.id });
     await crearPrestamo(app, { articuloId: a.id, estado: 'DEVUELTO' as never });
-    const { body } = await request(app.getHttpServer()).get('/api/prestamos').expect(200);
+    const { body } = await agente.get('/api/prestamos').expect(200);
     expect(body.map((p: { id: number }) => p.id)).toEqual([activo.id]);
   });
 
@@ -57,7 +55,7 @@ describe('Préstamos (e2e)', () => {
     const { body: creado } = await post({ articuloId: a.id, cantidad: 2, prestadoA: 'Prof. Gómez' });
     await devolver(creado.id).expect(200);
     expect((await articulo(a.id)).body).toMatchObject({ stockActual: 2, prestados: 0 });
-    const { body } = await request(app.getHttpServer()).get('/api/prestamos').expect(200);
+    const { body } = await agente.get('/api/prestamos').expect(200);
     expect(body).toEqual([]);
   });
 

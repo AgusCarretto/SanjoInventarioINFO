@@ -1,14 +1,15 @@
 import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { Movimiento } from '../src/movimientos/movimiento.entity.js';
-import { crearApp, crearArticulo, crearMovimiento, crearPrestamo, limpiarBase } from './helpers.js';
+import { crearApp, crearArticulo, crearMovimiento, crearPrestamo, limpiarBase, loguearAgente } from './helpers.js';
 
 describe('Movimientos (e2e)', () => {
   let app: INestApplication;
+  let agente: Awaited<ReturnType<typeof loguearAgente>>;
 
   beforeAll(async () => {
     app = await crearApp();
+    agente = await loguearAgente(app);
   });
   beforeEach(async () => {
     await limpiarBase(app);
@@ -17,8 +18,7 @@ describe('Movimientos (e2e)', () => {
     await app.close();
   });
 
-  const post = (cuerpo: object) =>
-    request(app.getHttpServer()).post('/api/movimientos').send(cuerpo);
+  const post = (cuerpo: object) => agente.post('/api/movimientos').send(cuerpo);
   const movimientosDe = (articuloId: number) =>
     app.get(DataSource).getRepository(Movimiento).find({ where: { articuloId } });
 
@@ -82,7 +82,7 @@ describe('Movimientos (e2e)', () => {
       }).expect(409);
       expect(body.message).toContain('stock');
       expect(await movimientosDe(a.id)).toHaveLength(0);
-      const { body: articulo } = await request(app.getHttpServer())
+      const { body: articulo } = await agente
         .get(`/api/articulos/${a.id}`)
         .expect(200);
       expect(articulo.stockActual).toBe(2);
@@ -117,7 +117,7 @@ describe('Movimientos (e2e)', () => {
 
   describe('GET /api/movimientos (historial)', () => {
     it('devuelve vacío sin movimientos', async () => {
-      const { body } = await request(app.getHttpServer())
+      const { body } = await agente
         .get('/api/movimientos')
         .expect(200);
       expect(body).toEqual([]);
@@ -134,7 +134,7 @@ describe('Movimientos (e2e)', () => {
         detalle: 'Impresora de Secretaría',
         fecha: new Date('2026-02-01'),
       });
-      const { body } = await request(app.getHttpServer())
+      const { body } = await agente
         .get('/api/movimientos')
         .expect(200);
       expect(body.map((m: { id: number }) => m.id)).toEqual([segundo.id, primero.id]);
@@ -156,7 +156,7 @@ describe('Movimientos (e2e)', () => {
         articuloId: (await crearArticulo(app, { nombre: 'Cable' })).id,
         fecha: new Date('2026-02-01'),
       });
-      const { body } = await request(app.getHttpServer())
+      const { body } = await agente
         .get('/api/movimientos')
         .expect(200);
       expect(body[0]).toMatchObject({

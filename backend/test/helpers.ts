@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module.js';
 import { configurarApp } from '../src/app.setup.js';
@@ -27,6 +28,21 @@ export async function crearApp(): Promise<INestApplication> {
     throw new Error(`Los e2e solo corren contra una base *_test, no "${base}"`);
   }
   return app;
+}
+
+/**
+ * Un agente de supertest ya logueado (usuario de prueba, solo existe con
+ * NODE_ENV=test — ver auth.service.ts): mantiene la cookie de sesión entre
+ * pedidos, así los tests pueden llamar a la API protegida sin repetir el login.
+ */
+export function crearAgente(app: INestApplication) {
+  return request.agent(app.getHttpServer());
+}
+
+export async function loguearAgente(app: INestApplication) {
+  const agente = crearAgente(app);
+  await agente.post('/api/auth/login').send({ usuario: 'test', password: 'clave-de-test-e2e' }).expect(200);
+  return agente;
 }
 
 /** Vacía todo y deja cargado el catálogo inicial, como en una instalación nueva. */

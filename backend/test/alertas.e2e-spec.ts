@@ -1,5 +1,4 @@
 import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
 import {
   crearApp,
   crearArticulo,
@@ -7,13 +6,16 @@ import {
   idCategoria,
   idTipo,
   limpiarBase,
+  loguearAgente,
 } from './helpers.js';
 
 describe('GET /api/alertas/stock (e2e)', () => {
   let app: INestApplication;
+  let agente: Awaited<ReturnType<typeof loguearAgente>>;
 
   beforeAll(async () => {
     app = await crearApp();
+    agente = await loguearAgente(app);
   });
   beforeEach(async () => {
     await limpiarBase(app);
@@ -22,8 +24,7 @@ describe('GET /api/alertas/stock (e2e)', () => {
     await app.close();
   });
 
-  const pedir = () =>
-    request(app.getHttpServer()).get('/api/alertas/stock').expect(200);
+  const pedir = () => agente.get('/api/alertas/stock').expect(200);
 
   it('devuelve solo los artículos en alerta, ordenados', async () => {
     await crearArticulo(app, {

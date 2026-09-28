@@ -1,14 +1,15 @@
 import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { cargarDatosEjemplo } from '../src/seed/cargar-datos-ejemplo.js';
-import { crearApp, limpiarBase } from './helpers.js';
+import { crearApp, limpiarBase, loguearAgente } from './helpers.js';
 
 describe('Seed de datos de ejemplo (e2e)', () => {
   let app: INestApplication;
+  let agente: Awaited<ReturnType<typeof loguearAgente>>;
 
   beforeAll(async () => {
     app = await crearApp();
+    agente = await loguearAgente(app);
   });
   beforeEach(async () => {
     await limpiarBase(app);
@@ -21,17 +22,13 @@ describe('Seed de datos de ejemplo (e2e)', () => {
     const ds = app.get(DataSource);
     expect(await cargarDatosEjemplo(ds)).toBe(true);
     expect(await cargarDatosEjemplo(ds)).toBe(false);
-    const { body } = await request(app.getHttpServer())
-      .get('/api/articulos')
-      .expect(200);
+    const { body } = await agente.get('/api/articulos').expect(200);
     expect(body).toHaveLength(10);
   });
 
   it('produce las alertas esperadas, en orden', async () => {
     await cargarDatosEjemplo(app.get(DataSource));
-    const { body } = await request(app.getHttpServer())
-      .get('/api/alertas/stock')
-      .expect(200);
+    const { body } = await agente.get('/api/alertas/stock').expect(200);
     expect(body.resumen).toEqual({ total: 5, sinStock: 2, bajos: 3 });
     expect(body.items.map((i: { nombre: string }) => i.nombre)).toEqual([
       'Cable de red Cat6',
@@ -44,9 +41,7 @@ describe('Seed de datos de ejemplo (e2e)', () => {
 
   it('deja cada artículo con su categoría y tipo del catálogo', async () => {
     await cargarDatosEjemplo(app.get(DataSource));
-    const { body } = await request(app.getHttpServer())
-      .get('/api/articulos')
-      .expect(200);
+    const { body } = await agente.get('/api/articulos').expect(200);
     const por = (nombre: string) =>
       body.find((a: { nombre: string }) => a.nombre === nombre);
     expect(por('Cable de red Cat6')).toMatchObject({
@@ -69,9 +64,7 @@ describe('Seed de datos de ejemplo (e2e)', () => {
 
   it('deja 1 unidad prestada del proyector y del parlante, ya restada del stock disponible', async () => {
     await cargarDatosEjemplo(app.get(DataSource));
-    const { body } = await request(app.getHttpServer())
-      .get('/api/articulos')
-      .expect(200);
+    const { body } = await agente.get('/api/articulos').expect(200);
     const por = (nombre: string) =>
       body.find((a: { nombre: string }) => a.nombre === nombre);
     expect(por('Proyector Epson EB-X06')).toMatchObject({

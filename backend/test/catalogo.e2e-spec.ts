@@ -1,5 +1,4 @@
 import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { cargarCatalogoInicial } from '../src/seed/catalogo.js';
 import {
@@ -8,6 +7,7 @@ import {
   idCategoria,
   idTipo,
   limpiarBase,
+  loguearAgente,
 } from './helpers.js';
 
 interface CategoriaApi {
@@ -19,10 +19,12 @@ interface CategoriaApi {
 describe('Catálogo de categorías y tipos (e2e)', () => {
   let app: INestApplication;
   let ds: DataSource;
+  let agente: Awaited<ReturnType<typeof loguearAgente>>;
 
   beforeAll(async () => {
     app = await crearApp();
     ds = app.get(DataSource);
+    agente = await loguearAgente(app);
   });
   beforeEach(async () => {
     await limpiarBase(app); // deja cargado el catálogo inicial
@@ -32,9 +34,7 @@ describe('Catálogo de categorías y tipos (e2e)', () => {
   });
 
   const pedir = async (): Promise<CategoriaApi[]> => {
-    const { body } = await request(app.getHttpServer())
-      .get('/api/catalogo')
-      .expect(200);
+    const { body } = await agente.get('/api/catalogo').expect(200);
     return body.categorias;
   };
   const tiposDe = (categorias: CategoriaApi[], nombre: string) =>

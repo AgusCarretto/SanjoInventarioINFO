@@ -1,5 +1,4 @@
 import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
 import { EstadoPrestamo } from '../src/prestamos/prestamo.entity.js';
 import {
   crearApp,
@@ -9,13 +8,16 @@ import {
   idCategoria,
   idTipo,
   limpiarBase,
+  loguearAgente,
 } from './helpers.js';
 
 describe('Artículos (e2e)', () => {
   let app: INestApplication;
+  let agente: Awaited<ReturnType<typeof loguearAgente>>;
 
   beforeAll(async () => {
     app = await crearApp();
+    agente = await loguearAgente(app);
   });
   beforeEach(async () => {
     await limpiarBase(app);
@@ -24,10 +26,8 @@ describe('Artículos (e2e)', () => {
     await app.close();
   });
 
-  const post = (cuerpo: object) =>
-    request(app.getHttpServer()).post('/api/articulos').send(cuerpo);
-  const patch = (id: number, cuerpo: object) =>
-    request(app.getHttpServer()).patch(`/api/articulos/${id}`).send(cuerpo);
+  const post = (cuerpo: object) => agente.post('/api/articulos').send(cuerpo);
+  const patch = (id: number, cuerpo: object) => agente.patch(`/api/articulos/${id}`).send(cuerpo);
 
   describe('GET /api/articulos', () => {
     it('devuelve prestados y nivel, ordenados por categoría del catálogo y nombre', async () => {
@@ -64,7 +64,7 @@ describe('Artículos (e2e)', () => {
       });
       await crearArticulo(app, { nombre: 'Suelto' }); // sin categoría
 
-      const { body } = await request(app.getHttpServer())
+      const { body } = await agente
         .get('/api/articulos')
         .expect(200);
 
@@ -111,7 +111,7 @@ describe('Artículos (e2e)', () => {
         stockMinimo: 1,
       });
       await crearPrestamo(app, { articuloId: a.id });
-      const { body } = await request(app.getHttpServer())
+      const { body } = await agente
         .get(`/api/articulos/${a.id}`)
         .expect(200);
       expect(body).toMatchObject({
@@ -130,11 +130,11 @@ describe('Artículos (e2e)', () => {
     });
 
     it('responde 404 si no existe', async () => {
-      await request(app.getHttpServer()).get('/api/articulos/9999').expect(404);
+      await agente.get('/api/articulos/9999').expect(404);
     });
 
     it('responde 400 si el id no es un número', async () => {
-      await request(app.getHttpServer()).get('/api/articulos/abc').expect(400);
+      await agente.get('/api/articulos/abc').expect(400);
     });
   });
 
@@ -440,10 +440,10 @@ describe('Artículos (e2e)', () => {
   describe('DELETE /api/articulos/:id', () => {
     it('elimina un artículo sin historial', async () => {
       const a = await crearArticulo(app, { nombre: 'Cable' });
-      await request(app.getHttpServer())
+      await agente
         .delete(`/api/articulos/${a.id}`)
         .expect(204);
-      await request(app.getHttpServer())
+      await agente
         .get(`/api/articulos/${a.id}`)
         .expect(404);
     });
@@ -455,13 +455,13 @@ describe('Artículos (e2e)', () => {
         stockActual: 2,
       });
       await crearPrestamo(app, { articuloId: a.id });
-      await request(app.getHttpServer())
+      await agente
         .delete(`/api/articulos/${a.id}`)
         .expect(409);
     });
 
     it('responde 404 si no existe', async () => {
-      await request(app.getHttpServer())
+      await agente
         .delete('/api/articulos/9999')
         .expect(404);
     });
